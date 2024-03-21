@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "telety", 
+    "telety-impl",
+    "telety-macro",
+]
+resolver = "2"
