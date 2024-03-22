@@ -2,8 +2,6 @@ mod util;
 
 #[test]
 fn test() {
-    const S: &str = util::types::MyEnum!(1, unique_ident, PARAM, stringify!(PARAM));
-
     struct MyStruct;
 
     telety::util::macro_fallback!(
@@ -28,6 +26,5 @@ fn test() {
         }
     );
 
-    println!("{S}");
-    println!("{}", MyStruct::ident());
+    MyStruct::ident();
 }

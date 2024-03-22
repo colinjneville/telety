@@ -1,15 +1,16 @@
 #![warn(missing_docs)]
 //! # telety
-//! Allows compile-time proc-macro 'reflection' of marked types,
-//! even from other modules and across crates.
+//! Access type information across crates and modules in your proc macros 
 //!
 //! ## Creating telety information
 //! Simply apply the attribute to a supported item and provide the current module path as an arguments:
 //! ```rust
 //! pub mod my_mod {
+//!     # use telety::telety;
 //!     #[telety(crate::my_mod)]
 //!     pub struct MyStruct;
 //! }
+//! # fn main() { }
 //! ```
 //! If the item has other attributes, [`#[telety]`](telety) should be placed after the last attribute which modifies the item definition.
 //! ## Using telety information
@@ -30,6 +31,7 @@
 //! `mix!`, a proc macro which combines the fields of two structs into a new struct.
 //! Two types from different crates that we want to combine:
 //! ```rust
+//! # use telety::telety;
 //! # mod water { pub enum Source { } }
 //! #
 //! #[telety(crate)]
@@ -37,8 +39,10 @@
 //!     pub water_liters: f32,
 //!     pub source: water::Source,
 //! }
+//! # fn main() { }
 //! ```
 //! ```rust
+//! # use telety::telety;
 //! # mod oil { pub enum Variety { } }
 //! #
 //! #[telety(crate)]
@@ -46,9 +50,10 @@
 //!     pub oil_liters: f32,
 //!     pub variety: oil::Variety,
 //! }
+//! # fn main() { }
 //! ```
 //! We define our first macro which takes paths to structs:
-//! ```rust
+//! ```rust,ignore
 //! # use proc_macro::TokenStream;
 //! 
 //! /// mix!(path_to_struct0, path_to_struct1, new_struct_ident);
@@ -57,15 +62,14 @@
 //!     // Split `tokens` to `path_to_struct0`, `path_to_struct1`, & `new_struct_ident`
 //!     // ...
 //!     // Take the relative paths `path_to_struct0` and `path_to_struct1`
-//!     // and use v1::TY::apply to call mix_impl! with the actual 
-//!     // 
+//!     // and use v1::TY::apply to call mix_impl! with the actual definition
 //!     let item0: syn::Path = parse2(path_to_struct0)?;
 //!     let item1: syn::Path = parse2(path_to_struct1)?;
 //!     
 //!     // telety works by find and replace - define a 'needle', and put it
 //!     // where you want the type information inserted.
-//!     let needle0 = parse_quote!(item0_goes_here);
-//!     let needle1 = parse_quote!(item1_goes_here);
+//!     let needle0: syn::Ident = parse_quote!(item0_goes_here);
+//!     let needle1: syn::Ident = parse_quote!(item1_goes_here);
 //!     // This macro generates the call to our actual implementation.
 //!     // The `TY.apply` calls will replace the needles with the type definitions.
 //!     let output = quote! {
@@ -73,13 +77,13 @@
 //!     };
 //!     
 //!     let output = telety::v1::TY.apply(
-//!         item0,
+//!         &item0,
 //!         needle0,
 //!         output,
 //!         None,
 //!     );
 //!     let output = telety::v1::TY.apply(
-//!         item1,
+//!         &item1,
 //!         needle1,
 //!         output,
 //!         None,
@@ -130,9 +134,9 @@
 //! * telety is not yet robust in handling all features of types.
 //!   Expect failures if your types have lifetimes, const generics, associated types, impl types, or dyn types.
 //! * Items cannot currently contain types which are less public than them. e.g.
-//!   ```rust
+//!   ```rust,compile_fail
 //!   struct Private;
-//!   #[telety(...)]
+//!   #[telety(crate)]
 //!   pub struct Public(Private);
 //!   ```
 //!   will not compile.

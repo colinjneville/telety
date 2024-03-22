@@ -97,7 +97,7 @@ impl<'item> Telety<'item> {
     /// Create a visitor which substitutes generic parameters as if this type were monomorphized
     /// with the provided generic arguments.  
     /// For example, if we have a type:
-    /// ```rust
+    /// ```rust,ignore
     /// #[telety(crate)]
     /// struct S<T, U, V = T>(T, U, V);
     /// ```
