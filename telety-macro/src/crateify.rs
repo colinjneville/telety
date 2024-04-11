@@ -7,7 +7,6 @@ pub(crate) fn crateify(arg: TokenStream) -> syn::Result<TokenStream> {
     let mut item: Item = parse2(arg)?;
     let mut visitor = visitor::Crateify::new();
     visitor.visit_item_mut(&mut item);
-    
+
     Ok(item.to_token_stream())
 }
-

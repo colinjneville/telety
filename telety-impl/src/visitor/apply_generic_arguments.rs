@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
 use syn::{
-    parse_quote_spanned, spanned::Spanned as _, visit_mut::{self, VisitMut}, Expr, GenericArgument,
-    GenericParam, Generics, Ident, Lifetime, Type,
+    parse_quote_spanned,
+    spanned::Spanned as _,
+    visit_mut::{self, VisitMut},
+    Expr, GenericArgument, GenericParam, Generics, Ident, Lifetime, Type,
 };
 
 pub struct ApplyGenericArguments<'p> {

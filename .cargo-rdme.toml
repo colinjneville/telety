@@ -1,0 +1,4 @@
+workspace-project = "telety"
+
+[intralinks]
+strip-links = true

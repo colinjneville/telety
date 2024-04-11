@@ -1,30 +1,36 @@
-mod util;
+struct _YesMacro;
+macro_rules! _YesMacro {
+    ($($tokens:tt)*) => {
+        impl YesMacro {
+            pub const fn text() -> &'static str {
+                $($tokens)*
+            }
+        }
+    };
+}
+use _YesMacro as YesMacro;
+
+struct NoMacro;
 
 #[test]
-fn test() {
-    struct MyStruct;
+fn try_invoke() {
+    use telety_macro::try_invoke;
 
-    telety::util::macro_fallback!(
-        self::util::types::MyEnum,
-        telety::util::noop,
-        1, unique_ident, PARAM,
-        impl MyStruct {
-            pub fn ident() -> &'static str {
-                stringify!(PARAM)
+    try_invoke!(self::YesMacro!("Yes");
+        impl YesMacro {
+            pub const fn text() -> &'static str {
+                "No"
+            }
+        }
+    );
+    try_invoke!(self::NoMacro!("Yes");
+        impl NoMacro {
+            pub const fn text() -> &'static str {
+                "No"
             }
         }
     );
 
-    telety::util::macro_fallback!(
-        self::util::types::NoTelety,
-        telety::util::noop,
-        1, unique_ident, PARAM,
-        impl MyStruct2 {
-            pub fn ident() -> &'static str {
-                stringify!(PARAM)
-            }
-        }
-    );
-
-    MyStruct::ident();
+    assert_eq!(self::YesMacro::text(), "Yes");
+    assert_eq!(self::NoMacro::text(), "No");
 }

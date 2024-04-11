@@ -5,7 +5,7 @@ use crate::alias;
 
 /// Indicates the type and index of an alias.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Index {
+pub(crate) enum Index {
     /// An alias to the item itself, like `Self`.
     Primary,
     /// An alias to a top-level type in the item.
@@ -13,14 +13,10 @@ pub enum Index {
 }
 
 impl Index {
-    pub(crate) fn definition(&self, unique_ident: Ident) -> alias::Definition {
-        alias::Definition::new(*self, unique_ident)
-    }
-
-    pub(crate) fn ident(&self) -> Ident {
+    pub(crate) fn ident(self) -> Ident {
         match self {
-            Self::Primary => format_ident!("AliasSelf"),
-            Self::Secondary(index) => format_ident!("Alias{index}"),
+            alias::Index::Primary => format_ident!("AliasSelf"),
+            alias::Index::Secondary(index) => format_ident!("Alias{index}"),
         }
     }
 }

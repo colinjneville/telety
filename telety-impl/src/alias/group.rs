@@ -14,10 +14,9 @@ impl Group {
         }
     }
 
-    #[allow(dead_code)]
     /// The [struct@Ident] of the module.
-    pub fn ident(&self) -> Ident {
-        self.mod_ident.clone()
+    pub fn ident(&self) -> &Ident {
+        &self.mod_ident
     }
 
     /// The qualified [Path] to the module.

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use syn::{visit::Visit as _, visit_mut::VisitMut as _, Generics, Type};
+use syn::{visit::Visit as _, visit_mut::VisitMut as _, Generics, Ident, Type};
 
 use crate::{alias, visitor, Alias};
 
 #[derive(Debug)]
-pub struct Map {
+pub(crate) struct Map {
     group: alias::Group,
     primary: alias::Details,
     // Maps exact type to index
@@ -27,7 +27,7 @@ impl Map {
     pub(crate) fn insert(&mut self, ty: &Type) -> Option<usize> {
         if !self.lookup.contains_key(ty) {
             let mut deselfed_ty = ty.clone();
-            let mut visitor = visitor::ApplyPrimaryAlias::new(self);
+            let mut visitor = visitor::ApplyAliases::new(self, true);
             visitor.visit_type_mut(&mut deselfed_ty);
 
             let index = self.list.len();
@@ -46,6 +46,15 @@ impl Map {
         }
     }
 
+    #[doc(hidden)]
+    pub fn module_ident(&self) -> &Ident {
+        self.group.ident()
+    }
+
+    pub(crate) fn self_alias(&self) -> Alias {
+        self.alias(alias::Index::Primary)
+    }
+
     pub(crate) fn group(&self) -> &alias::Group {
         &self.group
     }
@@ -53,9 +62,9 @@ impl Map {
     /// Look up the [Index](alias::Index) of a given type.  
     /// Returns [None] if there is no alias for the type.  
     /// Note that lookup is done based on exact token equality, not type equality.
-    pub fn get_index(&self, ty: &Type) -> Option<alias::Index> {
+    pub(crate) fn get_index(&self, ty: &Type) -> Option<alias::Index> {
         let mut deselfed_ty = ty.clone();
-        let mut visitor = visitor::ApplyPrimaryAlias::new(self);
+        let mut visitor = visitor::ApplyAliases::new(self, true);
         visitor.visit_type_mut(&mut deselfed_ty);
 
         if self.primary.aliased_type == deselfed_ty {
@@ -77,7 +86,7 @@ impl Map {
     }
 
     /// Get the [Alias] corresponding to an [alias::Index].
-    pub fn alias(&self, index: alias::Index) -> Alias {
+    pub(crate) fn alias(&self, index: alias::Index) -> Alias {
         let details = match index {
             alias::Index::Primary => &self.primary,
             alias::Index::Secondary(index) => &self.list[index],
@@ -88,12 +97,6 @@ impl Map {
     /// Iterate through all [alias::Index]es.
     pub fn iter(&self) -> Iter {
         Iter::new(self)
-    }
-
-    /// Create a visitor which can be used to replace all types found in this map
-    /// with their aliases.
-    pub fn visitor(&self) -> visitor::ApplySecondaryAliases {
-        visitor::ApplySecondaryAliases::new(self)
     }
 }
 
@@ -124,7 +127,11 @@ impl<'m> Iterator for Iter<'m> {
         match &mut self.state {
             IterState::Primary => {
                 self.state = IterState::Secondary(0);
-                Some(Alias::new(self.map, alias::Index::Primary, &self.map.primary))
+                Some(Alias::new(
+                    self.map,
+                    alias::Index::Primary,
+                    &self.map.primary,
+                ))
             }
             IterState::Secondary(index) => {
                 let details = self.map.list.get(*index)?;

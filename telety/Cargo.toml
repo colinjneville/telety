@@ -1,6 +1,6 @@
 [package]
 name = "telety"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/colinjneville/telety"
@@ -13,8 +13,8 @@ categories = ["rust-patterns", "development-tools::procedural-macro-helpers"]
 proc-macro2 = "1.0.69"
 quote = "1.0.33"
 syn = { version = "2.0.39", features = ["visit", "visit-mut"] }
-telety-impl = { version = "0.1", default-features = false }
-telety-macro = "0.1"
+telety-impl = { version = "0.2", path = "../telety-impl", default-features = false }
+telety-macro = { version = "0.2", path = "../telety-macro" }
 
 [features]
 default = ["v1"]

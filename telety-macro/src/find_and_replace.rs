@@ -1,5 +1,8 @@
 use proc_macro2::{Group, TokenStream};
-use syn::{parse::{Parse, ParseStream}, parse2, Token};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse2, Token,
+};
 use telety_impl::find_and_replace::SingleToken;
 
 struct FindAndReplaceArgs {
@@ -51,8 +54,8 @@ mod test {
     #[test]
     fn test() {
         let args: FindAndReplaceArgs = parse_quote!(
-            $, 
-            [$dollar], 
+            $,
+            [$dollar],
             macro_rules! my_macro {
                 ($($tokens:tt)*) => {
                     $($tokens)*
@@ -70,7 +73,8 @@ mod test {
                         $dollar ($dollar tokens)*
                     };
                 }
-            ).to_string()
+            )
+            .to_string()
         );
     }
 }

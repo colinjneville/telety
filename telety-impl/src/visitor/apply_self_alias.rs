@@ -6,15 +6,15 @@ use syn::{
 use crate::alias;
 
 /// Replace `Self` with a canonically-pathed alias
-pub(crate) struct ApplyPrimaryAlias<'am> {
+pub(crate) struct ApplySelfAlias<'am> {
     map: &'am alias::Map,
 }
 
-impl<'am> VisitMut for ApplyPrimaryAlias<'am> {
+impl<'am> VisitMut for ApplySelfAlias<'am> {
     fn visit_type_path_mut(&mut self, i: &mut TypePath) {
         // Replace `Self` with a global path
         if i.qself.is_none() && i.path.is_ident("Self") {
-            *i = self.map.alias(alias::Index::Primary).type_path();
+            *i = self.map.self_alias().type_path();
             return;
         }
 
@@ -22,7 +22,7 @@ impl<'am> VisitMut for ApplyPrimaryAlias<'am> {
     }
 }
 
-impl<'am> ApplyPrimaryAlias<'am> {
+impl<'am> ApplySelfAlias<'am> {
     pub fn new(map: &'am alias::Map) -> Self {
         Self { map }
     }

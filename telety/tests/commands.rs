@@ -4,15 +4,6 @@ mod v0 {
     use super::*;
 
     #[test]
-    fn identity() {
-        // No substitution should be made
-        self::util::types::MyEnum!(
-            0, identity, __PARAM__,
-            assert_eq!(stringify!(__PARAM__), "__PARAM__");
-        );
-    }
-
-    #[test]
     fn path() {
         self::util::types::MyEnum!(
             0, path, __PARAM__,

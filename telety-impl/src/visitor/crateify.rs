@@ -1,5 +1,8 @@
 use proc_macro2::Span;
-use syn::{visit_mut::{self, VisitMut}, Ident, ItemUse, Path, PathArguments, PathSegment, UseTree};
+use syn::{
+    visit_mut::{self, VisitMut},
+    Ident, ItemUse, Path, PathArguments, PathSegment, UseTree,
+};
 
 use super::calling_crate;
 
@@ -7,8 +10,12 @@ pub struct Crateify(PathSegment);
 
 impl Crateify {
     pub fn new() -> Self {
+        Self::new_as_crate(calling_crate(Span::call_site()))
+    }
+
+    pub fn new_as_crate(crate_ident: Ident) -> Self {
         Self(PathSegment {
-            ident: calling_crate(Span::call_site()),
+            ident: crate_ident,
             arguments: PathArguments::None,
         })
     }
