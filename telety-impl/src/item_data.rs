@@ -25,6 +25,7 @@ impl<T> IdentData<T> {
     }
 }
 
+#[allow(dead_code)]
 pub(crate) trait ItemData {
     fn attrs(&self) -> &[Attribute];
     fn attrs_mut(&mut self) -> &mut Vec<Attribute>;

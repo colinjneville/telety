@@ -23,16 +23,6 @@ impl<'ast, 'm> IdentifyAliases<'ast, 'm> {
 
 impl<'ast, 'am> Visit<'ast> for IdentifyAliases<'ast, 'am> {
     fn visit_type(&mut self, i: &'ast Type) {
-        if let Type::Path(type_path) = i {
-            if let Some(qself) = &type_path.qself {
-                // TODO Currently ignoring associated types
-                if qself.position > 0 {
-                    visit::visit_type(self, i);
-                    return;
-                }
-            }
-        }
-
         if self.alias_map.insert(i).is_some() {
             visit::visit_type(self, i);
         }

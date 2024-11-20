@@ -119,6 +119,8 @@ pub(crate) fn generate_alias_mod(telety: &Telety) -> syn::Result<TokenStream> {
         #[allow(dead_code)]
         #[allow(unused_macros)]
         #[allow(unused_imports)]
+        #[allow(non_snake_case)]
+        #[allow(non_camel_case_types)]
         #vis mod #mod_ident {
             #exact_alias_mod
 
@@ -163,25 +165,30 @@ fn generate_exact_alias(
 
     let item_use =
         if let (Type::Path(type_path), false) = (aliased_type, is_generic_parameter_type(alias)) {
-            // If path length is one, we may not be allowed to reexport at the desired vis,
-            // so export as `pub(super)` and the alias generation will use a convoluted workaround
-            let vis = if type_path.path.segments.len() == 1 {
-                Cow::Owned(parse_quote!(pub(super)))
+            if let Some(_qself) = &type_path.qself {
+                // Only simple paths can be used in use statements
+                quote!()
             } else {
-                Cow::Borrowed(vis)
-            };
+                // If path length is one, we may not be allowed to reexport at the desired vis,
+                // so export as `pub(super)` and the alias generation will use a convoluted workaround
+                let vis = if type_path.path.segments.len() == 1 {
+                    Cow::Owned(parse_quote!(pub(super)))
+                } else {
+                    Cow::Borrowed(vis)
+                };
 
-            let mut aliased_type_no_generics = type_path.clone();
-            aliased_type_no_generics
-                .path
-                .segments
-                .last_mut()
-                .expect("Path should have at least one segment")
-                .arguments = PathArguments::None;
+                let mut aliased_type_no_generics = type_path.clone();
+                aliased_type_no_generics
+                    .path
+                    .segments
+                    .last_mut()
+                    .expect("Path should have at least one segment")
+                    .arguments = PathArguments::None;
 
-            quote_spanned! { span =>
-                // Create a fixed alias for our submodule to reference
-                #vis use #aliased_type_no_generics as #ident;
+                quote_spanned! { span =>
+                    // Create a fixed alias for our submodule to reference
+                    #vis use #aliased_type_no_generics as #ident;
+                }
             }
         } else {
             quote!()
@@ -221,10 +228,19 @@ fn generate_alias(telety: &Telety, vis: &Visibility, alias: Alias) -> syn::Resul
     let telety_path = telety.options().telety_path();
 
     // Only non-type parameter path types can have an 'embedded' macro
-    if let (Type::Path(type_path), false) = (aliased_type, is_generic_parameter_type(alias)) {
-        let mut aliased_type_no_generics = type_path.clone();
+    let simple_path = if let (Type::Path(type_path), false) = (aliased_type, is_generic_parameter_type(alias)) {
+        if let Some(_qpath) = &type_path.qself {
+            None
+        } else {
+            Some(&type_path.path)
+        }
+    } else {
+        None
+    };
+
+    if let Some(simple_path) = simple_path {
+        let mut aliased_type_no_generics = simple_path.clone();
         aliased_type_no_generics
-            .path
             .segments
             .last_mut()
             .expect("Path should have at least one segment")
@@ -243,7 +259,7 @@ fn generate_alias(telety: &Telety, vis: &Visibility, alias: Alias) -> syn::Resul
         // ```
         // We can work around this, but it requires 2 extra exported macros per item, so prefer the simple
         // way if we have a multi-segment path as our type.
-        if type_path.path.segments.len() == 1 {
+        if simple_path.segments.len() == 1 {
             let needle: Ident = parse_quote!(__needle);
 
             let haystack = quote! {
@@ -260,7 +276,7 @@ fn generate_alias(telety: &Telety, vis: &Visibility, alias: Alias) -> syn::Resul
 
             let mut exported_apply = version::v0::PATH
                 .apply(parse_quote!(self::exact::#ident), needle.clone(), &haystack)
-                .with_fallback(&TokenStream::new())
+                .with_fallback(TokenStream::new())
                 .with_macro_forwarding(macro_maker_ident);
 
             if let Some(telety_path) = telety.options().telety_path.as_ref() {
