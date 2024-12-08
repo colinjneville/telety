@@ -1,3 +1,5 @@
+#![allow(non_local_definitions)]
+
 struct _YesMacro;
 macro_rules! _YesMacro {
     ($($tokens:tt)*) => {

@@ -121,6 +121,7 @@ pub(crate) fn generate_alias_mod(telety: &Telety) -> syn::Result<TokenStream> {
         #[allow(unused_imports)]
         #[allow(non_snake_case)]
         #[allow(non_camel_case_types)]
+        #[allow(non_local_definitions)]
         #vis mod #mod_ident {
             #exact_alias_mod
 
