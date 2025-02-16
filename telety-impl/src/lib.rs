@@ -6,6 +6,7 @@ pub use alias::Alias;
 mod command;
 pub use command::{Apply, Command};
 pub mod find_and_replace;
+pub mod interop;
 mod item_data;
 mod options;
 pub use options::Options;

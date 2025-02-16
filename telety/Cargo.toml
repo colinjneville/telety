@@ -1,6 +1,6 @@
 [package]
 name = "telety"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/colinjneville/telety"
@@ -10,12 +10,13 @@ keywords = ["macro", "generator", "reflection", "compile-time"]
 categories = ["rust-patterns", "development-tools::procedural-macro-helpers"]
 
 [dependencies]
-proc-macro2 = "1.0.69"
-quote = "1.0.33"
-syn = { version = "2.0.39", features = ["visit", "visit-mut"] }
-telety-impl = { version = "0.2.1", path = "../telety-impl", default-features = false }
-telety-macro = { version = "0.2.1", path = "../telety-macro" }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["visit", "visit-mut"] }
+telety-impl = { workspace = true }
+telety-macro = { workspace = true }
 
 [features]
-default = ["v1"]
-v1 = ["telety-impl/v1"]
+default = ["v1", "full-errors"]
+v1 = ["telety-impl/v1", "telety-macro/v1"]
+full-errors = ["telety-macro/full-errors"]

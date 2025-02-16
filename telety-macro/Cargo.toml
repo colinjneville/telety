@@ -1,6 +1,6 @@
 [package]
 name = "telety-macro"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/colinjneville/telety"
@@ -10,7 +10,11 @@ description = "Proc macros for telety. Not intended for public use."
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "1.0.69"
-quote = "1.0.33"
-syn = { version = "2.0.39", features = ["full", "visit", "visit-mut"] }
-telety-impl = { version = "0.2", path = "../telety-impl" }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["full", "visit", "visit-mut"] }
+telety-impl = { workspace = true }
+
+[features]
+v1 = ["telety-impl/v1"]
+full-errors = []

@@ -7,7 +7,9 @@ pub use crateify::Crateify;
 mod decrateify;
 pub use decrateify::Decrateify;
 mod identify_aliases;
-pub(crate) use identify_aliases::IdentifyAliases;
+pub use identify_aliases::IdentifyAliases;
+mod replace_lifetime_placeholder;
+pub(crate) use replace_lifetime_placeholder::ReplaceLifetimePlaceholder;
 mod unused_params;
 pub(crate) use unused_params::UnusedParams;
 

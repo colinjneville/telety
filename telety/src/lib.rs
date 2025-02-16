@@ -212,6 +212,10 @@ pub mod visitor {
     use super::Telety;
 
     #[doc(inline)]
+    /// A `syn` visitor which inserts [syn::Type]s as aliases to an [alias::Map].
+    pub use telety_impl::visitor::IdentifyAliases;
+
+    #[doc(inline)]
     /// A `syn` visitor which replaces contextually-dependent types with qualified aliases.  
     /// Created by [Telety::aliases_visitor]
     pub use telety_impl::visitor::ApplyAliases;
@@ -236,6 +240,12 @@ pub mod visitor {
     /// replaces it with the name of the crate the proc macro is executing in (or a specified crate name).
     #[doc(inline)]
     pub use telety_impl::visitor::Decrateify;
+}
+
+/// [Alias]es provide qualified paths to types used in a telety-enabled type
+pub mod alias {
+    #[doc(inline)]
+    pub use telety_impl::alias::{Map, Module};
 }
 
 #[doc(inline)]

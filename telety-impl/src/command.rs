@@ -247,7 +247,7 @@ impl ToTokens for Apply {
         }
 
         let mut output = parse_quote_spanned! { span =>
-            #macro_path!(#version, #keyword #args, #needle, #haystack);
+            #macro_path! { #version, #keyword #args, #needle, #haystack }
         };
 
         if let Some(fallback) = fallback {
@@ -258,10 +258,10 @@ impl ToTokens for Apply {
                 .unwrap_or_else(|| Cow::Owned(parse_quote!(::telety)));
 
             output = parse_quote_spanned! { span =>
-                #telety_path::util::try_invoke!(
+                #telety_path::util::try_invoke! {
                     #output
                     #fallback
-                );
+                }
             };
 
             if let Some(unique_macro_ident) = &self.unique_macro_ident {
@@ -284,7 +284,7 @@ impl ToTokens for Apply {
                 };
 
                 let invoke = quote_spanned! { span =>
-                    #textual_macro_ident!($);
+                    #textual_macro_ident! { $ }
                 };
 
                 output = quote_spanned! { span =>

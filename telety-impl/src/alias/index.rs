@@ -1,7 +1,4 @@
 use quote::format_ident;
-use syn::Ident;
-
-use crate::alias;
 
 /// Indicates the type and index of an alias.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -13,10 +10,15 @@ pub(crate) enum Index {
 }
 
 impl Index {
-    pub(crate) fn ident(self) -> Ident {
+    pub(crate) fn ident(self) -> syn::Ident {
         match self {
-            alias::Index::Primary => format_ident!("AliasSelf"),
-            alias::Index::Secondary(index) => format_ident!("Alias{index}"),
+            Self::Primary => format_ident!("AliasSelf"),
+            Self::Secondary(index) => format_ident!("Alias{index}"),
         }
+    }
+
+    pub(crate) fn ident_internal(self) -> syn::Ident {
+        let ident = self.ident();
+        format_ident!("{ident}Internal")
     }
 }

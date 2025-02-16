@@ -1,4 +1,4 @@
-use quote::{format_ident, quote, ToTokens};
+use quote::{quote, ToTokens};
 use syn::{
     parse::Parse, parse2, parse_quote, punctuated::Punctuated, spanned::Spanned as _,
     visit_mut::VisitMut as _, Attribute, Expr, ExprLit, Ident, Lit, MetaNameValue, Path, Token,
@@ -12,16 +12,15 @@ pub struct Options {
     pub telety_path: Option<Path>,
     pub macro_ident: Option<Ident>,
     pub visibility: Option<Visibility>,
+    pub proxy: Option<Path>,
 }
 
 impl Options {
     pub fn from_attrs(attrs: &[Attribute]) -> syn::Result<Self> {
         let mut args = None;
         for attr in attrs {
-            let mut segments_iter = attr.path().segments.iter();
-            if let (Some(attr_name), None) = (segments_iter.next(), segments_iter.next()) {
-                if attr_name.ident == "telety"
-                    && args
+            if attr.path().is_ident("telety") {
+                if args
                         .replace(parse2(attr.meta.require_list()?.tokens.clone())?)
                         .is_some()
                 {
@@ -48,20 +47,6 @@ impl Options {
         containing_path
     }
 
-    pub fn unique_ident(&self, ident: &Ident) -> Ident {
-        let mut iter = self.module_path.segments.iter();
-        let mut unique_ident = iter
-            .next()
-            .expect("Path must have at least one segment")
-            .ident
-            .clone();
-        for segment in iter {
-            let i = &segment.ident;
-            unique_ident = format_ident!("{unique_ident}_{i}");
-        }
-        format_ident!("{unique_ident}_{ident}")
-    }
-
     pub fn telety_path(&self) -> Path {
         self.telety_path
             .clone()
@@ -77,6 +62,7 @@ impl Parse for Options {
         let mut telety_path = None;
         let mut macro_ident = None;
         let mut visibility = None;
+        let mut proxy = None;
 
         if let Some(_comma) = input.parse::<Option<Token![,]>>()? {
             let named_args: Punctuated<MetaNameValue, Token![,]> =
@@ -100,6 +86,8 @@ impl Parse for Options {
                         macro_ident = Some(value.parse()?);
                     } else if ident == "visibility" {
                         visibility = Some(value.parse()?);
+                    } else if ident == "proxy" {
+                        proxy = Some(value.parse()?);
                     } else {
                         return Err(syn::Error::new(
                             named_arg.path.span(),
@@ -120,6 +108,7 @@ impl Parse for Options {
             telety_path,
             macro_ident,
             visibility,
+            proxy,
         })
     }
 }
@@ -131,6 +120,7 @@ impl ToTokens for Options {
             telety_path,
             macro_ident,
             visibility,
+            proxy,
         } = self;
 
         // Convert to string literals
@@ -152,26 +142,20 @@ impl ToTokens for Options {
             .as_ref()
             .map(ToString::to_string)
             .into_iter();
-
-        // module_path.to_tokens(tokens);
-        // <Token![,]>::default().to_tokens(tokens);
+        let proxy = proxy
+            .as_ref()
+            .map(ToTokens::to_token_stream)
+            .as_ref()
+            .map(ToString::to_string)
+            .into_iter();
 
         quote!(
-            #module_path,
-            #(telety_path = #telety_path,)*
-            #(macro_ident = #macro_ident,)*
-            #(visibility = #visibility,)*
+            #module_path
+            #(, telety_path = #telety_path)*
+            #(, macro_ident = #macro_ident)*
+            #(, visibility = #visibility)*
+            #(, proxy = #proxy)*
         )
         .to_tokens(tokens);
-        // if let Some(telety_path) = telety_path {
-        //     quote!(telety_path = stringify!(#telety_path),).to_tokens(tokens);
-        // }
-        // if let Some(macro_ident) = macro_ident {
-        //     quote!(telety_path = stringify!(#telety_path),).to_tokens(tokens);
-        // }
-        // if let Some(visibility) = visibility {
-        //     visibility.to_tokens(tokens);
-        //     <Token![,]>::default().to_tokens(tokens);
-        // }
     }
 }

@@ -1,117 +1,85 @@
-mod details;
-pub(crate) use details::Details;
+mod exact;
+pub(crate) use exact::Exact;
 mod index;
 pub(crate) use index::Index;
 mod map;
-pub(crate) use map::Map;
-mod group;
-pub(crate) use group::Group;
+pub use map::Map;
+mod module;
+pub use module::Module;
+mod public;
+pub(crate) use public::Public;
+mod target;
+use syn::parse_quote;
+pub(crate) use target::Target;
 
-use syn::{
-    punctuated::Punctuated, AngleBracketedGenericArguments, GenericArgument, Generics, Ident, Path,
-    PathArguments, PathSegment, Token, Type, TypePath,
-};
-
-use crate::syn_util;
-
-/// The details of a type alias.
 #[derive(Debug, Clone, Copy)]
-pub struct Alias<'m> {
-    map: &'m Map,
-    index: Index,
-    details: &'m Details,
+pub struct Alias<'map> {
+    pub(crate) map: &'map Map<'map>, 
+    pub(crate) target: &'map Target, 
+    pub(crate) index: Index,
 }
 
-impl<'m> Alias<'m> {
-    pub(crate) fn new(map: &'m Map, index: Index, details: &'m Details) -> Self {
+impl<'map> Alias<'map> {
+    pub(crate) fn new(map: &'map Map, target: &'map Target, index: Index) -> Self {
         Self {
             map,
+            target,
             index,
-            details,
         }
     }
 
-    #[doc(hidden)]
-    pub fn ident(&self) -> Ident {
-        self.index.ident()
+    pub fn qualified_path(&self) -> syn::Path {
+        let map_path = self.map.map_path();
+        let module_ident = self.map.module().ident();
+        let ident = self.index.ident();
+        parse_quote!(#map_path::#module_ident::#ident)
     }
 
-    /// The generic parameters required for this type alias.  
-    /// For example, this item has two type parameters:  
-    /// ```rust,ignore
-    /// struct Either<A, B> {
-    ///     A(Box<A>),
-    ///     B(Box<B>),
-    /// }
-    /// ```
-    /// But reusing these parameters on the alias to the type in variant `A` will fail,
-    /// as parameter `B` is unused by the aliased type:
-    /// ```rust,ignore
-    /// type Alias<A, B> = Box<A>;
-    /// ```
-    /// ```text,ignore
-    /// type parameter `B` is unused
-    /// ```
-    /// This method returns only the generic parameters used by the alias.
-    pub fn parameters(&self) -> &Generics {
-        &self.details.parameters
+    pub fn qualified_type_path(&self) -> syn::TypePath {
+        let path = self.qualified_path();
+        let(_, type_generics, _) = self.target.generics.split_for_impl();
+        parse_quote!(#path #type_generics)
     }
 
-    /// Returns this alias formatted as a [PathSegment], without generic parameters
-    pub fn path_segment_no_parameters(&self) -> PathSegment {
-        PathSegment {
-            ident: self.index.ident(),
-            arguments: PathArguments::None,
-        }
-    }
-
-    /// Returns this alias formatted as a [PathSegment], with unsubstituted generic
-    /// arguments if applicable.
-    pub fn path_segment(&self) -> PathSegment {
-        let mut segment = self.path_segment_no_parameters();
-        segment.arguments = PathArguments::AngleBracketed(AngleBracketedGenericArguments {
-            colon2_token: None,
-            lt_token: Default::default(),
-            args: syn_util::generic_params_to_arguments(self.parameters()),
-            gt_token: Default::default(),
-        });
-        segment
-    }
-
-    /// The original type being aliased
-    pub fn aliased_type(&self) -> &Type {
-        &self.details.aliased_type
+    pub fn qualified_type(&self) -> syn::Type {
+        syn::Type::Path(self.qualified_type_path())
     }
 
     /// The type arguments on the original aliased type.  
     /// e.g. `i32, u64` for `my_crate::MyType<i32, i64>`
-    pub fn aliased_type_arguments(&self) -> Option<&Punctuated<GenericArgument, Token![,]>> {
-        if let Type::Path(type_path) = self.aliased_type() {
-            if let Some(last_segment) = type_path.path.segments.last() {
-                if let PathArguments::AngleBracketed(angle_bracketed) = &last_segment.arguments {
-                    return Some(&angle_bracketed.args);
-                }
+    pub fn aliased_type_arguments(&self) -> Option<&syn::punctuated::Punctuated<syn::GenericArgument, syn::Token![,]>> {
+        if let Some(last_segment) = self.aliased_type().path.segments.last() {
+            if let syn::PathArguments::AngleBracketed(angle_bracketed) = &last_segment.arguments {
+                return Some(&angle_bracketed.args);
             }
         }
+        
         None
     }
 
-    /// Creates a qualified [Path] to the alias with no generic arguments
-    pub fn path(&self) -> Path {
-        let mut path = self.map.group().path();
-        path.segments.push(self.path_segment_no_parameters());
-        path
+    /// Is this alias for a type parameter?  
+    /// Only lone type parameters are included (i.e. `T`, but not `Vec<T>`).  
+    pub(crate) fn is_generic_parameter_type(&self) -> bool {
+        let type_path = &self.target.aliased_type;
+        let mut iter = self.target.generics.params.iter();
+
+        if let (Some(syn::GenericParam::Type(single)), None) = (iter.next(), iter.next()) {
+            type_path.path.is_ident(&single.ident)
+        } else {
+            false
+        }
     }
 
-    /// Creates a qualified [TypePath] to the alias, with generic arguments.
-    pub fn type_path(&self) -> TypePath {
-        let mut path = self.map.group().path();
-        path.segments.push(self.path_segment());
-        TypePath { qself: None, path }
+    pub fn aliased_type(&self) -> &syn::TypePath {
+        &self.target.aliased_type
     }
 
-    /// Creates a qualified [Type] of the alias.
-    pub fn ty(&self) -> Type {
-        Type::Path(self.type_path())
+    pub(crate) fn exact(self) -> Exact<'map> {
+        Exact::new(self)
+    }
+
+    pub(crate) fn public(self) -> Public<'map> {
+        Public::new(self)
     }
 }
+

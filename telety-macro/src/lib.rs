@@ -1,7 +1,5 @@
-mod alias_definition;
 mod crateify;
 mod find_and_replace;
-mod syn_util;
 mod telety;
 mod try_invoke;
 
@@ -42,6 +40,7 @@ pub fn find_and_replace(arg: proc_macro::TokenStream) -> proc_macro::TokenStream
         find_and_replace::find_and_replace(arg.into()).map_err(syn::Error::into_compile_error);
     ts.into()
 }
+
 #[proc_macro]
 pub fn try_invoke(arg: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let (Ok(ts) | Err(ts)) =

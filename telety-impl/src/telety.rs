@@ -1,13 +1,13 @@
 use quote::format_ident;
 use syn::{
     spanned::Spanned, visit::Visit, AngleBracketedGenericArguments, Attribute, GenericArgument,
-    Ident, Item, Path, PathArguments, PathSegment, Type, TypePath, Visibility,
+    Ident, Item, Path, PathArguments, PathSegment, TypePath, Visibility,
 };
 
 use crate::{
     alias,
     item_data::{ItemData as _, Namespaces},
-    syn_util, visitor, Alias, Options,
+    syn_util, visitor, Options,
 };
 
 /// Wraps an [Item] which has the `#[telety]` attribute to provide additional information
@@ -15,9 +15,8 @@ use crate::{
 pub struct Telety<'item> {
     options: Options,
     item: &'item Item,
-    alias_map: alias::Map,
+    alias_map: alias::Map<'static>,
     macro_ident: Ident,
-    unique_ident: Ident,
     visibility: Visibility,
 }
 
@@ -52,11 +51,11 @@ impl<'item> Telety<'item> {
             ));
         };
 
-        let unique_ident = Self::make_unique_ident(&macro_ident, &options);
+        let unique_ident = Self::make_unique_ident(&options, &macro_ident);
 
         let parameters = item.generics().cloned().unwrap_or_default();
 
-        let self_type: Type = {
+        let self_type = {
             let arguments = PathArguments::AngleBracketed(AngleBracketedGenericArguments {
                 colon2_token: None,
                 lt_token: Default::default(),
@@ -70,15 +69,18 @@ impl<'item> Telety<'item> {
                 arguments,
             });
 
-            Type::Path(TypePath { qself: None, path })
+            TypePath { qself: None, path }
         };
 
-        let alias_group = alias::Group::new(
-            options.converted_containing_path(),
-            format_ident!("__{unique_ident}"),
-        );
+        let module = alias::Module::from_named_item(item)?;
 
-        let mut alias_map = alias::Map::new(alias_group, parameters.clone(), self_type);
+        let mut alias_map = alias::Map::new_root(
+            options.telety_path.clone(),
+            options.converted_containing_path(), 
+            module, 
+            parameters.clone(),
+            unique_ident);
+        alias_map.set_self(self_type);
 
         // Identify all unique non-type parameter types and give them an index
         // (based on order of appearance), stored in our map
@@ -90,7 +92,6 @@ impl<'item> Telety<'item> {
             item,
             alias_map,
             macro_ident,
-            unique_ident,
             visibility,
         })
     }
@@ -108,38 +109,15 @@ impl<'item> Telety<'item> {
         &self.options
     }
 
+    /// Provides the [alias::Map] for this item, which describes the mapping
+    /// of types appearing in the item to the aliases created for them.
+    pub fn alias_map(&self) -> &alias::Map {
+        &self.alias_map
+    }
+
     #[doc(hidden)]
     pub fn visibility(&self) -> &Visibility {
         &self.visibility
-    }
-
-    #[doc(hidden)]
-    pub fn module_ident(&self) -> &Ident {
-        self.alias_map.module_ident()
-    }
-
-    // /// Provides the [alias::Map] for this item, which describes the mapping
-    // /// of types appearing in the item to the aliases created for them.
-    // pub fn alias_map(&self) -> &alias::Map {
-    //     &self.alias_map
-    // }
-
-    pub fn self_alias(&self) -> Alias {
-        self.alias_map.self_alias()
-    }
-
-    pub fn alias_of(&self, ty: &Type) -> Option<Alias> {
-        self.alias_map.alias_of(ty)
-    }
-
-    pub fn iter_aliases(&self) -> impl Iterator<Item = Alias> {
-        self.alias_map.iter()
-    }
-
-    /// Create a visitor which can be used to replace all types found in this map
-    /// with their aliases.
-    pub fn aliases_visitor(&self) -> visitor::ApplyAliases {
-        visitor::ApplyAliases::new(&self.alias_map, false)
     }
 
     /// Create a visitor which substitutes generic parameters as if this type were monomorphized
@@ -165,20 +143,6 @@ impl<'item> Telety<'item> {
         };
 
         visitor::ApplyGenericArguments::new(parameters, generic_arguments)
-    }
-
-    fn make_unique_ident(macro_ident: &Ident, options: &Options) -> Ident {
-        let mut iter = options.module_path.segments.iter();
-        let mut unique_ident = iter
-            .next()
-            .expect("Path must have at least one segment")
-            .ident
-            .clone();
-        for segment in iter {
-            let i = &segment.ident;
-            unique_ident = format_ident!("{unique_ident}_{i}");
-        }
-        format_ident!("{unique_ident}_{macro_ident}")
     }
 
     /// The [Item] this describes
@@ -214,8 +178,22 @@ impl<'item> Telety<'item> {
         &self.macro_ident
     }
 
-    /// A (reasonably) unique [struct@Ident] for this item.  
-    pub fn unique_ident(&self) -> &Ident {
-        &self.unique_ident
+    fn module_path_ident(options: &Options) -> Ident {
+        let mut iter = options.module_path.segments.iter();
+        let mut unique_ident = iter
+            .next()
+            .expect("Path must have at least one segment")
+            .ident
+            .clone();
+        for segment in iter {
+            let i = &segment.ident;
+            unique_ident = format_ident!("{unique_ident}_{i}");
+        }
+        unique_ident
+    }
+
+    fn make_unique_ident(options: &Options, suffix: &Ident) -> Ident {
+        let module_path_ident = Self::module_path_ident(options);
+        format_ident!("{module_path_ident}_{suffix}") 
     }
 }

@@ -15,11 +15,11 @@ pub const PATH: Command = Command::new(VERSION, "path", |ty| {
     let telety_path = ty.options().telety_path();
 
     Some(quote! {
-        #telety_path::__private::find_and_replace!(
+        #telety_path::__private::find_and_replace! {
             $#needle,
             [#replacement],
             $($#haystack)*
-        )
+        }
     })
 });
 
