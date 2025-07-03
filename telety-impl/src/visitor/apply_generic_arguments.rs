@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use syn::{
     parse_quote_spanned,
     spanned::Spanned as _,
-    visit_mut::{self, VisitMut},
     Expr, GenericArgument, GenericParam, Generics, Ident, Lifetime, Type,
 };
 
@@ -14,7 +13,7 @@ pub struct ApplyGenericArguments<'p> {
 }
 
 impl<'p> ApplyGenericArguments<'p> {
-    pub(crate) fn new<'a>(
+    pub fn new<'a>(
         params: &'p Generics,
         args: impl IntoIterator<Item = &'a GenericArgument>,
     ) -> syn::Result<Self> {
@@ -48,7 +47,11 @@ impl<'p> ApplyGenericArguments<'p> {
                         }
                     } else if let Some(param_default) = &param_type.default {
                         let mut param_default = param_default.clone();
-                        v.visit_type_mut(&mut param_default);
+                        directed_visit::visit_mut(
+                            &mut directed_visit::syn::direct::FullDefault,
+                            &mut v,
+                            &mut param_default,
+                        );
                         v.types.insert(&param_type.ident, param_default);
                     } else {
                         return Err(syn::Error::new(
@@ -66,7 +69,11 @@ impl<'p> ApplyGenericArguments<'p> {
                         }
                     } else if let Some(param_default) = &param_const.default {
                         let mut param_default = param_default.clone();
-                        v.visit_expr_mut(&mut param_default);
+                        directed_visit::visit_mut(
+                            &mut directed_visit::syn::direct::FullDefault,
+                            &mut v,
+                            &mut param_default,
+                        );
                         v.consts.insert(&param_const.ident, param_default);
                     } else {
                         return Err(syn::Error::new(
@@ -82,44 +89,54 @@ impl<'p> ApplyGenericArguments<'p> {
     }
 }
 
-impl<'p> VisitMut for ApplyGenericArguments<'p> {
-    fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
-        if let Some(lifetime_arg) = self.lifetimes.get(i) {
+impl<'p> directed_visit::syn::visit::FullMut for ApplyGenericArguments<'p> {
+    fn visit_lifetime_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Lifetime)
+    where 
+        D: directed_visit::DirectMut<Self, syn::Lifetime> + ?Sized, 
+    {
+        if let Some(lifetime_arg) = visitor.lifetimes.get(node) {
             if let Some(lifetime_arg) = lifetime_arg {
-                *i = lifetime_arg.clone();
+                *node = lifetime_arg.clone();
             } else {
-                let span = i.span();
-                *i = parse_quote_spanned! { span => '_ };
+                let span = node.span();
+                *node = parse_quote_spanned! { span => '_ };
             }
             return;
         }
 
-        visit_mut::visit_lifetime_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 
-    fn visit_type_mut(&mut self, i: &mut Type) {
-        if let Type::Path(path) = i {
+    fn visit_type_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Type)
+    where 
+        D: directed_visit::DirectMut<Self, syn::Type> + ?Sized, 
+    {
+        if let Type::Path(path) = node {
+            // TODO should check first segment to support some associated types
             if let Some(ident) = path.path.get_ident() {
-                if let Some(value) = self.types.get(ident) {
-                    *i = value.clone();
+                if let Some(value) = visitor.types.get(ident) {
+                    *node = value.clone();
                     return;
                 }
             }
         }
 
-        visit_mut::visit_type_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 
-    fn visit_expr_mut(&mut self, i: &mut Expr) {
-        if let Expr::Path(path) = i {
+    fn visit_expr_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Expr)
+    where 
+        D: directed_visit::DirectMut<Self, syn::Expr> + ?Sized, 
+    {
+        if let Expr::Path(path) = node {
             if let Some(ident) = path.path.get_ident() {
-                if let Some(value) = self.consts.get(ident) {
-                    *i = value.clone();
+                if let Some(value) = visitor.consts.get(ident) {
+                    *node = value.clone();
                     return;
                 }
             }
         }
 
-        visit_mut::visit_expr_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 }

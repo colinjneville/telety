@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use quote::{format_ident, quote, TokenStreamExt as _};
-use syn::{parse_quote, visit::Visit as _, visit_mut::VisitMut as _};
+use syn::parse_quote;
 
 use crate::{alias, Alias, syn_util, visitor};
 
@@ -34,11 +34,11 @@ pub struct Map<'p> {
 
     module: alias::Module,
     unique_ident: syn::Ident,
-    primary: Option<alias::Target>,
+    primary: Option<(alias::Path, alias::Arguments)>,
     // Maps exact type to index
-    lookup: HashMap<syn::TypePath, alias::Index>,
-    // Maps index to de-Self'ed type
-    list: Vec<alias::Target>,
+    lookup: HashMap<alias::Path, (usize, alias::Arguments)>,
+    // // Maps index to de-Self'ed type
+    // list: Vec<alias::Path>,
 }
 
 impl<'p> Map<'p> {
@@ -63,7 +63,7 @@ impl<'p> Map<'p> {
             unique_ident,
             primary: None,
             lookup: HashMap::new(),
-            list: vec![]
+            // list: vec![]
         }
     }
 
@@ -79,76 +79,62 @@ impl<'p> Map<'p> {
             unique_ident,
             primary: None,
             lookup: HashMap::new(),
-            list: vec![],
+            // list: vec![],
         }
     }
 
-    pub(crate) fn set_self(&mut self, self_type: syn::TypePath) {
-        // TODO assumes `self_type` uses all generic parameters
-        self.lookup.insert(self_type.clone(), alias::Index::Primary);
-        self.lookup.insert(parse_quote!(Self), alias::Index::Primary);
-        self.primary = Some(alias::Target::new(self.generics().clone(), self_type));
+    pub(crate) fn set_self(&mut self, self_type: &syn::TypePath) -> Result<(), alias::Error> {
+        let (path, args) = alias::Path::new(self_type)?;
+        // Self may have 'baked-in' generic parameters, so we can't always reuse the same alias.
+        // If the explicit type also appears, we can just add it as an ordinary secondary alias
+        self.primary = Some((path, args));
+
+        Ok(())
+    }
+
+    pub(crate) fn full_lookup<'map>(&'map self, ty: &syn::TypePath) -> Result<Option<Alias<'map>>, alias::Error> {
+        match self.local_lookup(ty)? {
+            some @ Some(_) => Ok(some),
+            None => {
+                if let Some(parent) = self.parent {
+                    parent.full_lookup(ty)
+                } else {
+                    Ok(None)
+                }
+            }
+        }
+    }
+
+    pub(crate) fn local_lookup<'map>(&'map self, ty: &syn::TypePath) -> Result<Option<Alias<'map>>, alias::Error> {
+        let (path, args) = alias::Path::new(ty)?;
+        if let Some((path, (index, _canon_args))) = self.lookup.get_key_value(&path) {
+            Ok(Some(Alias::new(self, path, alias::Index::Secondary(*index), args)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub(crate) fn local_get_self(&self) -> Option<Alias<'_>> {
+        if let Some((path, args)) = &self.primary {
+            Some(Alias::new(self, path, alias::Index::Primary, args.clone()))
+        } else {
+            None
+        }
     }
 
     fn root(&self) -> &Root {
         self.root.as_ref()
     }
 
-    fn sub_map_iter(&self) -> SubMapIter<'_, 'p> {
-        SubMapIter(Some(self))
-    }
-
-    fn get_alias_internal(&self, ty: &syn::TypePath) -> Option<Alias> {
-        if let Some(primary) = self.primary.as_ref() {
-            if ty == &primary.aliased_type {
-                return Some(Alias::new(self, primary, alias::Index::Primary));
-            }
-        }
-        
-        if let Some(&index) = self.lookup.get(ty) {
-            // TODO this is redundant and janky now
-            match index {
-                alias::Index::Primary => 
-                    Some(Alias::new(self, self.primary.as_ref().unwrap(), alias::Index::Primary)),
-                alias::Index::Secondary(i) => 
-                    Some(Alias::new(self, &self.list[i], alias::Index::Secondary(i))),
-            }
-        } else if let Some(parent) = self.parent {
-            parent.get_alias_internal(ty)
-        } else {
-            None
-        }
-    }
-
+    /// Iterate all [Alias]es at this map level ([Alias]es from parent maps are not included)
     pub fn iter_aliases(&self) -> impl Iterator<Item = Alias> {
-        let primary_aliases = self.primary
-            .as_ref()
-            .map(|p| Alias::new(self, p, alias::Index::Primary))
-            .into_iter();
+        let primary_aliases = self.local_get_self().into_iter();
 
-        let secondary_aliases = self.list
-            .iter()
-            .enumerate()
-            .map(|(i, target)| Alias::new(self, target, alias::Index::Secondary(i)));
+        let secondary_aliases = self.lookup
+            .iter() 
+            .map(|(path, (index, args))| Alias::new(self, path, alias::Index::Secondary(*index), args.clone()));
         
         primary_aliases.chain(secondary_aliases)
-    }
-}
-
-struct SubMapIter<'m, 'p>(Option<&'m Map<'p>>);
-
-impl<'m, 'p> Iterator for SubMapIter<'m, 'p> {
-    type Item = &'m Map<'p>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(map) = self.0.take() {
-            if let Some(parent) = map.parent {
-                self.0 = Some(parent);
-            }
-            Some(map)
-        } else {
-            None
-        }
     }
 }
 
@@ -184,63 +170,40 @@ impl<'p> Map<'p> {
     /// Register a [syn::TypePath] in the [Map]. If the exact (i.e. identical tokens, not equivalent Rust types) type 
     /// already exists in the map, this is a no-op. Maps constructed with the same parameters and order of
     /// inserts will yield the same [Alias]es.
-    pub fn insert(&mut self, ty: syn::TypePath) -> bool {
-        if self.get_alias(&ty).is_some() {
-            false
+    pub fn insert(&mut self, ty: &syn::TypePath) -> Result<bool, alias::Error> {
+        if ty.path.is_ident("Self") {
+            // TODO should this be an error instead?
+            Ok(false)
+        } else if self.full_lookup(ty)?.is_some() {
+            // Path already exists
+            Ok(false)
         } else {
-            let mut deselfed_ty = ty.clone();
-        
-            let mut visitor = visitor::ApplyAliases::new(self);
-            visitor.set_apply_free_types(false);
-            visitor.visit_type_path_mut(&mut deselfed_ty);
+            let (path, mut args) = alias::Path::new(ty)?;
 
-            if let Some(alias) = self.get_alias(&deselfed_ty) {
-                // Cache this alternate Self-containing type
-                self.lookup.insert(ty, alias.index);
-                false
-            } else {
-                let index = alias::Index::Secondary(self.list.len());
-                
-                let mut visitor = visitor::UnusedParams::new();
-                visitor.visit_type_path(&deselfed_ty);
-                let mut generics = self.generics().clone();
-                if let Some(placeholder_lifetime) = placeholder_visitor.anonymous_lifetime() {
-                    generics.params.push(parse_quote!(#placeholder_lifetime));
-                }
-                visitor.remove_unused(&mut generics);
+            let index = self.lookup.len();
+            args.parameterize();
 
-                if ty != deselfed_ty {
-                    self.lookup.insert(deselfed_ty.clone(), index);
-                }
-                self.lookup.insert(ty, index);
-                self.list.push(alias::Target::new(generics, deselfed_ty));
+            self.lookup.insert(path, (index, args));
 
-                true
-            }
+            Ok(true)
         }
     }
 
-    pub fn get_self(&self) -> Option<Alias> {
-        for map in self.sub_map_iter() {
-            if let Some(primary) = map.primary.as_ref() {
-                return Some(Alias::new(map, primary, alias::Index::Primary));
-            }
+    pub fn get_self(&self) -> Option<Alias<'_>> {
+        if let Some(alias) = self.local_get_self() {
+            Some(alias)
+        } else if let Some(parent) = self.parent {
+            parent.get_self()
+        } else {
+            None
         }
-
-        None
     }
 
-    pub fn get_alias(&self, ty: &syn::TypePath) -> Option<Alias> {
-        match self.get_alias_internal(&ty) {
-            Some(alias) => Some(alias),
-            None => {
-                let mut deselfed_ty = ty.clone();
-                let mut visitor = visitor::ApplyAliases::new(self);
-                visitor.set_apply_free_types(false);
-                visitor.visit_type_path_mut(&mut deselfed_ty);
-
-                self.get_alias_internal(&deselfed_ty)
-            }
+    pub fn get_alias<'map>(&'map self, ty: &syn::TypePath) -> Result<Option<Alias<'map>>, alias::Error> {
+        if ty == &parse_quote!(Self) {
+            Ok(self.get_self())
+        } else {
+            self.full_lookup(ty)
         }
     }
 
@@ -248,7 +211,7 @@ impl<'p> Map<'p> {
         visitor::ApplyAliases::new(self)
     }
 
-    pub fn with_module(&self) -> impl quote::ToTokens + use<'p> {
+    pub fn with_module(&self) -> impl quote::ToTokens + use<'_> {
         self.module.with_contents(self)
     }
 }

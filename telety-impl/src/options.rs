@@ -1,7 +1,7 @@
 use quote::{quote, ToTokens};
 use syn::{
     parse::Parse, parse2, parse_quote, punctuated::Punctuated, spanned::Spanned as _,
-    visit_mut::VisitMut as _, Attribute, Expr, ExprLit, Ident, Lit, MetaNameValue, Path, Token,
+    Attribute, Expr, ExprLit, Ident, Lit, MetaNameValue, Path, Token,
     Visibility,
 };
 
@@ -20,6 +20,7 @@ impl Options {
         let mut args = None;
         for attr in attrs {
             if attr.path().is_ident("telety") {
+                #[allow(clippy::collapsible_if, reason = "separate mutating if for clarity")]
                 if args
                         .replace(parse2(attr.meta.require_list()?.tokens.clone())?)
                         .is_some()
@@ -42,7 +43,11 @@ impl Options {
 
     pub fn converted_containing_path(&self) -> Path {
         let mut containing_path = self.module_path.clone();
-        visitor::Crateify::new().visit_path_mut(&mut containing_path);
+        directed_visit::visit_mut(
+            &mut directed_visit::syn::direct::FullDefault,
+            &mut visitor::Crateify::new(),
+            &mut containing_path
+        );
 
         containing_path
     }
@@ -57,7 +62,11 @@ impl Options {
 impl Parse for Options {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut module_path: Path = input.parse()?;
-        visitor::Decrateify::new().visit_path_mut(&mut module_path);
+        directed_visit::visit_mut(
+            &mut directed_visit::syn::direct::FullDefault,
+            &mut visitor::Decrateify::new(),
+            &mut module_path
+        );
 
         let mut telety_path = None;
         let mut macro_ident = None;

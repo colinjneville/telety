@@ -55,3 +55,9 @@ pub enum AssociatedTypes {
     C(<i32 as Gat<'static, u32>>::Lifetime<'static>),
     D(<i32 as Gat<'static, u32>>::Both<'static, i32>),
 }
+
+#[telety(crate::util::types)]
+pub trait GenericParam<Param>
+{
+    fn apply_item(param: Param) -> Param;
+}

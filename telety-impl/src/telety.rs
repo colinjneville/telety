@@ -1,6 +1,6 @@
 use quote::format_ident;
 use syn::{
-    spanned::Spanned, visit::Visit, AngleBracketedGenericArguments, Attribute, GenericArgument,
+    spanned::Spanned, AngleBracketedGenericArguments, Attribute, GenericArgument,
     Ident, Item, Path, PathArguments, PathSegment, TypePath, Visibility,
 };
 
@@ -80,12 +80,16 @@ impl<'item> Telety<'item> {
             module, 
             parameters.clone(),
             unique_ident);
-        alias_map.set_self(self_type);
+        alias_map.set_self(&self_type)?;
 
         // Identify all unique non-type parameter types and give them an index
         // (based on order of appearance), stored in our map
-        let mut identify_visitor = visitor::IdentifyAliases::new(&mut alias_map);
-        identify_visitor.visit_item(item);
+        let mut identify_visitor = visitor::identify_aliases::IdentifyAliases::new(&mut alias_map);
+        directed_visit::visit(
+            &mut directed_visit::syn::direct::FullDefault,
+            &mut identify_visitor,
+            item,
+        );
 
         Ok(Self {
             options,

@@ -1,7 +1,6 @@
 use proc_macro2::Span;
 use syn::{
-    visit_mut::{self, VisitMut},
-    Ident, ItemUse, Path, PathArguments, PathSegment, UseTree,
+    Ident, PathArguments, PathSegment, UseTree,
 };
 
 use super::calling_crate;
@@ -27,28 +26,37 @@ impl Default for Decrateify {
     }
 }
 
-impl VisitMut for Decrateify {
-    fn visit_path_mut(&mut self, i: &mut Path) {
-        if let Some(first_segment) = i.segments.first_mut() {
+
+impl directed_visit::syn::visit::FullMut for Decrateify {
+    fn visit_path_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Path)
+    where 
+        D: directed_visit::DirectMut<Self, syn::Path> + ?Sized, 
+    {
+        if let Some(first_segment) = node.segments.first_mut() {
             if first_segment.ident == "crate" {
-                let mut segment = self.0.clone();
+                let mut segment = visitor.0.clone();
                 segment.ident.set_span(first_segment.ident.span());
                 *first_segment = segment;
-                i.leading_colon = Some(Default::default());
+                node.leading_colon = Some(Default::default());
             }
         }
 
-        visit_mut::visit_path_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 
-    fn visit_item_use_mut(&mut self, i: &mut ItemUse) {
-        if let UseTree::Path(path) = &mut i.tree {
+    fn visit_item_use_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::ItemUse)
+    where 
+        D: directed_visit::DirectMut<Self, syn::ItemUse> + ?Sized, 
+    {
+        if let UseTree::Path(path) = &mut node.tree {
             if path.ident == "crate" {
-                let mut ident = self.0.ident.clone();
+                let mut ident = visitor.0.ident.clone();
                 ident.set_span(path.ident.span());
                 path.ident = ident;
-                i.leading_colon = Some(Default::default());
+                node.leading_colon = Some(Default::default());
             }
         }
+
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 }

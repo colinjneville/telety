@@ -1,5 +1,3 @@
-use syn::visit_mut::{self, VisitMut};
-
 use crate::alias;
 
 pub struct ApplyAliases<'map> {
@@ -26,26 +24,31 @@ impl<'map> ApplyAliases<'map> {
     }
 }
 
-impl<'map> VisitMut for ApplyAliases<'map> {
-    fn visit_type_path_mut(&mut self, i: &mut syn::TypePath) {
-        // Replace `Self` with a global path
-        // TODO Associated types, if ever supported, would also be done here
-        if self.apply_associated_types {
-            if i.qself.is_none() && i.path.is_ident("Self") {
-                if let Some(self_mapped) = self.map.get_self() {
-                    *i = self_mapped.qualified_type_path();
-                    return;
+impl<'map> directed_visit::syn::visit::FullMut for ApplyAliases<'map> {
+    fn visit_type_path_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::TypePath)
+    where 
+        D: directed_visit::DirectMut<Self, syn::TypePath> + ?Sized, 
+    {
+        'apply: {
+            // Replace `Self` with a global path
+            // TODO Associated types, if ever supported, would also be done here
+            if node.qself.is_none() && node.path.is_ident("Self") {
+                if visitor.apply_associated_types {
+                    if let Some(self_mapped) = visitor.map.get_self() {
+                        *node = self_mapped.to_type_path();
+                    }
+                }
+                break 'apply;
+            }
+
+            if visitor.apply_free_types {
+                if let Ok(Some(mapped)) = visitor.map.get_alias(node) {
+                    *node = mapped.to_type_path();
+                    break 'apply;
                 }
             }
-        }
+        };
 
-        if self.apply_free_types {
-            if let Some(mapped) = self.map.get_alias(i) {
-                *i = mapped.qualified_type_path();
-                return;
-            }
-        }
-
-        visit_mut::visit_type_path_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 }

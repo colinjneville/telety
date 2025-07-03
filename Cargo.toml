@@ -8,12 +8,14 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-telety = { version = "0.2.2", path = "telety" }
-telety-impl = { version = "0.2.2", path = "telety-impl" }
-telety-macro = { version = "0.2.2", path = "telety-macro" }
+telety = { version = "0.3.0", path = "telety" }
+telety-impl = { version = "0.3.0", path = "telety-impl" }
+telety-macro = { version = "0.3.0", path = "telety-macro" }
 
 proc-macro2 = "1.0.69"
 quote = "1.0.33"
 syn = { version = "2.0.39", features = ["visit", "visit-mut"] }
+
+directed-visit = { version = "0.3.2", features = ["syn"] }
 
 bitflags = "2.4.2"

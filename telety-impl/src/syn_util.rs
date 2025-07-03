@@ -147,13 +147,3 @@ mod test_sublevel_visibility {
         );
     }
 }
-
-pub fn remove_generics_bounds(generics: &mut Generics) {
-    for param in generics.params.iter_mut() {
-        match param {
-            syn::GenericParam::Lifetime(lifetime) => lifetime.bounds.clear(),
-            syn::GenericParam::Type(ty) => ty.bounds.clear(),
-            syn::GenericParam::Const(_) => {}
-        }
-    }
-}

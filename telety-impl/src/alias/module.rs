@@ -47,7 +47,7 @@ impl Module {
         }
     }
 
-    pub fn with_contents<C: quote::ToTokens>(&self, contents: &C) -> impl quote::ToTokens {
+    pub fn with_contents<C: quote::ToTokens>(&self, contents: &C) -> impl quote::ToTokens + use<C> {
         let Self {
             visibility,
             ident,

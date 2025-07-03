@@ -1,82 +1,69 @@
 use std::collections::HashSet;
 
-use syn::{
-    visit::{self, Visit},
-    GenericParam, Ident,
-};
+use crate::alias;
 
-use crate::{alias, item_data::ItemData};
-
-pub struct IdentifyAliases<'ast, 'm, 'map> {
+pub struct IdentifyAliases<'m, 'map> {
     alias_map: &'m mut alias::Map<'map>,
-    generic_scopes: Vec<GenericScope<'ast>>,
+    parameters: HashSet<syn::Ident>,
 }
 
-impl<'ast, 'm, 'map> IdentifyAliases<'ast, 'm, 'map> {
+impl<'m, 'map> IdentifyAliases<'m, 'map> {
     pub fn new(alias_map: &'m mut alias::Map<'map>) -> Self {
+        let parameters = alias_map.generics().params.iter()
+            .filter_map(|p| match p {
+                syn::GenericParam::Lifetime(_lifetime_param) => None,
+                syn::GenericParam::Type(type_param) => Some(&type_param.ident),
+                syn::GenericParam::Const(const_param) => Some(&const_param.ident),
+            })
+            .cloned().collect();
+
         Self {
             alias_map,
-            generic_scopes: vec![],
+            parameters,
         }
     }
 
-    pub fn push_generics_scope(&mut self, generics: &'ast syn::Generics) {
-        self.generic_scopes.push(GenericScope::new());
-        let scope = self.generic_scopes.last_mut().unwrap();
-        scope.visit_generics(generics);
-    }
-
-    pub fn pop_generics_scope(&mut self) {
-        self.generic_scopes
-            .pop()
-            .expect("generic scope stack is mismatched");
+    fn is_parameter(&self, ident: &syn::Ident) -> bool {
+        self.parameters.contains(ident)
     }
 }
 
-impl<'ast, 'm, 'map> Visit<'ast> for IdentifyAliases<'ast, 'm, 'map> {
-    fn visit_type_path(&mut self, i: &'ast syn::TypePath) {
-        if self.alias_map.insert(i.clone()) {
-            visit::visit_type_path(self, i);
-        }
-    }
-
-    fn visit_item(&mut self, i: &'ast syn::Item) {
-        if let Some(generics) = i.generics() {
-            self.push_generics_scope(generics);
-
-            i.visit_generics_scope(self);
-
-            self.pop_generics_scope();
-        }
-
-        syn::visit::visit_item(self, i);
-    }
-}
-
-struct GenericScope<'ast>(HashSet<&'ast Ident>);
-
-impl<'ast> GenericScope<'ast> {
-    pub fn new() -> Self {
-        // TODO nested generic scopes won't actually work at the moment
-        Self(Default::default())
-    }
-
-    #[allow(dead_code)]
-    pub fn contains(&self, ident: &Ident) -> bool {
-        self.0.contains(ident)
-    }
-}
-
-impl<'ast> Visit<'ast> for GenericScope<'ast> {
-    fn visit_generic_param(&mut self, i: &'ast GenericParam) {
-        match i {
-            GenericParam::Lifetime(_) => {}
-            GenericParam::Type(ty) => {
-                self.0.insert(&ty.ident);
-            }
-            GenericParam::Const(_cnst) => {
-                // TODO
+impl<'m, 'map> directed_visit::syn::visit::Full for IdentifyAliases<'m, 'map> {
+    fn visit_generics_enter<D>(mut visitor: directed_visit::Visitor<'_, D, Self>, node: &directed_visit::syn::GenericsEnter)
+    where 
+        D: directed_visit::Direct<Self, directed_visit::syn::GenericsEnter> + ?Sized, 
+    {
+        for param in node {
+            if let syn::GenericParam::Type(param) = param {
+                visitor.parameters.insert(param.ident.clone());
             }
         }
+    }
+
+    fn visit_generics_exit<D>(mut visitor: directed_visit::Visitor<'_, D, Self>, node: &directed_visit::syn::GenericsExit)
+    where 
+        D:directed_visit::Direct<Self,directed_visit::syn::GenericsExit> + ?Sized, 
+    {
+        for param in node {
+            if let syn::GenericParam::Type(param) = param {
+                visitor.parameters.remove(&param.ident);
+            }
+        }
+    }
+
+    fn visit_type_path<D>(mut visitor: directed_visit::Visitor<'_, D, Self>, node: &syn::TypePath) 
+    where 
+        D: directed_visit::Direct<Self, syn::TypePath> + ?Sized, 
+    {
+        if let Some(first_segment) = node.path.segments.first() {
+            if node.path.leading_colon.is_none() && (first_segment.ident == "Self" || visitor.is_parameter(&first_segment.ident)) {
+                // TypePath is a type parameter or associated type of one
+                return;
+            }
+        }
+        
+        // No error handling, we just alias everything we are able to
+        let _ = visitor.alias_map.insert(node);
+        directed_visit::Visitor::visit(visitor, node);
     }
 }

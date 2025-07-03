@@ -1,5 +1,5 @@
 use syn::{
-    visit::Visit, visit_mut::VisitMut, Attribute, Fields, Generics, Ident, Item, ItemConst,
+    Attribute, Fields, Generics, Ident, Item, ItemConst,
     ItemEnum, ItemExternCrate, ItemFn, ItemForeignMod, ItemImpl, ItemMacro, ItemMod, ItemStatic,
     ItemStruct, ItemTrait, ItemTraitAlias, ItemType, ItemUnion, ItemUse, Visibility,
 };
@@ -37,11 +37,6 @@ pub(crate) trait ItemData {
 
     fn generics(&self) -> Option<&Generics>;
     fn generics_mut(&mut self) -> Option<&mut Generics>;
-
-    /// Apply a visitor to the subsets of the AST which is affected
-    /// by `generics`.
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>);
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut);
 }
 
 impl ItemData for ItemConst {
@@ -71,16 +66,6 @@ impl ItemData for ItemConst {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        visitor.visit_type(&self.ty);
-        visitor.visit_expr(&self.expr);
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        visitor.visit_type_mut(&mut self.ty);
-        visitor.visit_expr_mut(&mut self.expr);
-    }
 }
 
 impl ItemData for ItemEnum {
@@ -109,18 +94,6 @@ impl ItemData for ItemEnum {
 
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
-    }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        for variant in &self.variants {
-            visitor.visit_variant(variant);
-        }
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        for variant in &mut self.variants {
-            visitor.visit_variant_mut(variant);
-        }
     }
 }
 
@@ -160,10 +133,6 @@ impl ItemData for ItemExternCrate {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         None
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, _visitor: &mut dyn Visit<'ast>) {}
-
-    fn visit_generics_scope_mut(&mut self, _visitor: &mut dyn VisitMut) {}
 }
 
 impl ItemData for ItemFn {
@@ -192,30 +161,6 @@ impl ItemData for ItemFn {
 
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.sig.generics)
-    }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        for fn_arg in &self.sig.inputs {
-            visitor.visit_fn_arg(fn_arg);
-        }
-        if let Some(variadic) = &self.sig.variadic {
-            visitor.visit_variadic(variadic);
-        }
-        visitor.visit_return_type(&self.sig.output);
-
-        visitor.visit_block(&self.block);
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        for fn_arg in &mut self.sig.inputs {
-            visitor.visit_fn_arg_mut(fn_arg);
-        }
-        if let Some(variadic) = &mut self.sig.variadic {
-            visitor.visit_variadic_mut(variadic);
-        }
-        visitor.visit_return_type_mut(&mut self.sig.output);
-
-        visitor.visit_block_mut(&mut self.block);
     }
 }
 
@@ -246,10 +191,6 @@ impl ItemData for ItemForeignMod {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         None
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, _visitor: &mut dyn Visit<'ast>) {}
-
-    fn visit_generics_scope_mut(&mut self, _visitor: &mut dyn VisitMut) {}
 }
 
 impl ItemData for ItemImpl {
@@ -278,30 +219,6 @@ impl ItemData for ItemImpl {
 
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
-    }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        if let Some((_, trait_path, _)) = &self.trait_ {
-            visitor.visit_path(trait_path);
-        }
-
-        visitor.visit_type(&self.self_ty);
-
-        for item in &self.items {
-            visitor.visit_impl_item(item);
-        }
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        if let Some((_, trait_path, _)) = &mut self.trait_ {
-            visitor.visit_path_mut(trait_path);
-        }
-
-        visitor.visit_type_mut(&mut self.self_ty);
-
-        for item in &mut self.items {
-            visitor.visit_impl_item_mut(item);
-        }
     }
 }
 
@@ -336,10 +253,6 @@ impl ItemData for ItemMacro {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         None
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, _visitor: &mut dyn Visit<'ast>) {}
-
-    fn visit_generics_scope_mut(&mut self, _visitor: &mut dyn VisitMut) {}
 }
 
 impl ItemData for ItemMod {
@@ -369,10 +282,6 @@ impl ItemData for ItemMod {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         None
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, _visitor: &mut dyn Visit<'ast>) {}
-
-    fn visit_generics_scope_mut(&mut self, _visitor: &mut dyn VisitMut) {}
 }
 
 impl ItemData for ItemStatic {
@@ -402,10 +311,6 @@ impl ItemData for ItemStatic {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         None
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, _visitor: &mut dyn Visit<'ast>) {}
-
-    fn visit_generics_scope_mut(&mut self, _visitor: &mut dyn VisitMut) {}
 }
 
 impl ItemData for ItemStruct {
@@ -443,18 +348,6 @@ impl ItemData for ItemStruct {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        for field in &self.fields {
-            visitor.visit_field(field);
-        }
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        for field in &mut self.fields {
-            visitor.visit_field_mut(field);
-        }
-    }
 }
 
 impl ItemData for ItemTrait {
@@ -483,24 +376,6 @@ impl ItemData for ItemTrait {
 
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
-    }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        for supertrait in &self.supertraits {
-            visitor.visit_type_param_bound(supertrait);
-        }
-        for item in &self.items {
-            visitor.visit_trait_item(item);
-        }
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        for supertrait in &mut self.supertraits {
-            visitor.visit_type_param_bound_mut(supertrait);
-        }
-        for item in &mut self.items {
-            visitor.visit_trait_item_mut(item);
-        }
     }
 }
 
@@ -531,18 +406,6 @@ impl ItemData for ItemTraitAlias {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        for bound in &self.bounds {
-            visitor.visit_type_param_bound(bound);
-        }
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        for bound in &mut self.bounds {
-            visitor.visit_type_param_bound_mut(bound);
-        }
-    }
 }
 
 impl ItemData for ItemType {
@@ -571,14 +434,6 @@ impl ItemData for ItemType {
 
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
-    }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        visitor.visit_type(&self.ty);
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        visitor.visit_type_mut(&mut self.ty);
     }
 }
 
@@ -609,14 +464,6 @@ impl ItemData for ItemUnion {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         Some(&mut self.generics)
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        visitor.visit_fields_named(&self.fields);
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        visitor.visit_fields_named_mut(&mut self.fields);
-    }
 }
 
 impl ItemData for ItemUse {
@@ -646,10 +493,6 @@ impl ItemData for ItemUse {
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         None
     }
-
-    fn visit_generics_scope<'ast>(&'ast self, _visitor: &mut dyn Visit<'ast>) {}
-
-    fn visit_generics_scope_mut(&mut self, _visitor: &mut dyn VisitMut) {}
 }
 
 fn item_variant_trait(item: &Item) -> &dyn ItemData {
@@ -721,13 +564,5 @@ impl ItemData for Item {
 
     fn generics_mut(&mut self) -> Option<&mut Generics> {
         item_variant_trait_mut(self).generics_mut()
-    }
-
-    fn visit_generics_scope<'ast>(&'ast self, visitor: &mut dyn Visit<'ast>) {
-        item_variant_trait(self).visit_generics_scope(visitor);
-    }
-
-    fn visit_generics_scope_mut(&mut self, visitor: &mut dyn VisitMut) {
-        item_variant_trait_mut(self).visit_generics_scope_mut(visitor);
     }
 }

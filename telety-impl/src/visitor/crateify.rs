@@ -1,7 +1,6 @@
 use proc_macro2::Span;
 use syn::{
-    visit_mut::{self, VisitMut},
-    Ident, ItemUse, Path, PathArguments, PathSegment, UseTree,
+    Ident, PathArguments, PathSegment, UseTree,
 };
 
 use super::calling_crate;
@@ -27,26 +26,32 @@ impl Default for Crateify {
     }
 }
 
-impl VisitMut for Crateify {
-    fn visit_path_mut(&mut self, i: &mut Path) {
-        if let Some(first_segment) = i.segments.first_mut() {
-            if *first_segment == self.0 {
+impl directed_visit::syn::visit::FullMut for Crateify {
+    fn visit_path_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Path)
+    where 
+        D: directed_visit::DirectMut<Self, syn::Path> + ?Sized, 
+    {
+        if let Some(first_segment) = node.segments.first_mut() {
+            if *first_segment == visitor.0 {
                 first_segment.ident = Ident::new("crate", first_segment.ident.span());
-                i.leading_colon = None;
+                node.leading_colon = None;
             }
         }
 
-        visit_mut::visit_path_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 
-    fn visit_item_use_mut(&mut self, i: &mut ItemUse) {
-        if let UseTree::Path(path) = &mut i.tree {
-            if path.ident == self.0.ident {
+    fn visit_item_use_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::ItemUse)
+    where 
+        D: directed_visit::DirectMut<Self, syn::ItemUse> + ?Sized, 
+    {
+        if let UseTree::Path(path) = &mut node.tree {
+            if path.ident == visitor.0.ident {
                 path.ident = Ident::new("crate", path.ident.span());
-                i.leading_colon = None;
+                node.leading_colon = None;
             }
         }
 
-        visit_mut::visit_item_use_mut(self, i);
+        directed_visit::Visitor::visit_mut(visitor, node);
     }
 }

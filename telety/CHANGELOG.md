@@ -11,6 +11,7 @@
   ```
   The above imports the std::fmt::Debug trait along with a generated telety macro using the attributed definition (the definition is only used in the macro, it is otherwise discarded from the attribute output).
   Note that all types in the definition must be in scope.
+* Converted syn visitors to directed-visit visitors. This allows them to be used with custom AST extensions, such as attribute meta contents.
 * Hide more warnings from generated macros.
 
 ## 0.2.0

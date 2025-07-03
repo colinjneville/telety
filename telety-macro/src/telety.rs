@@ -3,14 +3,18 @@ use std::borrow::Cow;
 use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote_spanned, TokenStreamExt as _};
 use syn::{
-    parse2, parse_quote, parse_quote_spanned, spanned::Spanned as _, visit_mut::VisitMut as _, Attribute, Ident, Item, LitInt, Visibility
+    parse2, parse_quote, parse_quote_spanned, spanned::Spanned as _, Attribute, Ident, Item, LitInt, Visibility
 };
 use telety_impl::{version, visitor, Options, Telety};
 
 pub(crate) fn telety_impl(attr_args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
     let item: Item = parse2(item)?;
     let mut options: Options = parse2(attr_args)?;
-    visitor::Decrateify::new().visit_path_mut(&mut options.module_path);
+    directed_visit::visit_mut(
+        &mut directed_visit::syn::direct::FullDefault,
+        &mut visitor::Decrateify::new(),
+        &mut options.module_path
+    );
 
     let telety = Telety::new_with_options(&item, options)?;
 
