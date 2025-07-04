@@ -25,9 +25,11 @@ impl<'map> ApplyAliases<'map> {
 }
 
 impl<'map> directed_visit::syn::visit::FullMut for ApplyAliases<'map> {
-    fn visit_type_path_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::TypePath)
-    where 
-        D: directed_visit::DirectMut<Self, syn::TypePath> + ?Sized, 
+    fn visit_type_path_mut<D>(
+        visitor: directed_visit::Visitor<'_, D, Self>,
+        node: &mut syn::TypePath,
+    ) where
+        D: directed_visit::DirectMut<Self, syn::TypePath> + ?Sized,
     {
         'apply: {
             // Replace `Self` with a global path

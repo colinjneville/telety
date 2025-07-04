@@ -2,8 +2,8 @@
 use proc_macro2::{Group, Literal, Punct, TokenStream, TokenTree};
 use quote::{ToTokens, TokenStreamExt};
 use syn::{
-    parse::{Parse, ParseStream},
     Ident,
+    parse::{Parse, ParseStream},
 };
 
 pub enum SingleToken {

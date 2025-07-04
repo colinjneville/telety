@@ -252,9 +252,9 @@ pub mod alias {
 pub use telety_impl::Alias;
 
 #[doc(inline)]
-pub use telety_impl::Command;
-#[doc(inline)]
 pub use telety_impl::Apply;
+#[doc(inline)]
+pub use telety_impl::Command;
 #[doc(inline)]
 pub use telety_impl::Telety;
 

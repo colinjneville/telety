@@ -1,6 +1,8 @@
 use proc_macro2::Ident;
 use syn::{
-    parse_quote, parse_quote_spanned, punctuated::Punctuated, Attribute, Expr, ExprPath, GenericArgument, GenericParam, Generics, Path, PathArguments, PathSegment, Token, Type, TypePath, VisRestricted, Visibility
+    Attribute, Expr, ExprPath, GenericArgument, GenericParam, Generics, Path, PathArguments,
+    PathSegment, Token, Type, TypePath, VisRestricted, Visibility, parse_quote,
+    parse_quote_spanned, punctuated::Punctuated,
 };
 
 pub(crate) fn visibility_macro_export(visibility: &Visibility) -> Option<Attribute> {
@@ -116,15 +118,9 @@ mod test_sublevel_visibility {
 
     #[test]
     fn test() {
-        test_sublevel_visibility(
-            &parse_quote!(pub(in self)),
-            &parse_quote!(pub(in super)),
-        );
+        test_sublevel_visibility(&parse_quote!(pub(in self)), &parse_quote!(pub(in super)));
 
-        test_sublevel_visibility(
-            &parse_quote!(pub(self)),
-            &parse_quote!(pub(super)),
-        );
+        test_sublevel_visibility(&parse_quote!(pub(self)), &parse_quote!(pub(super)));
 
         test_sublevel_visibility(
             &parse_quote!(pub(super)),
@@ -141,9 +137,6 @@ mod test_sublevel_visibility {
             &parse_quote!(pub(in crate::asdf)),
         );
 
-        test_sublevel_visibility(
-            &parse_quote!(pub(crate)),
-            &parse_quote!(pub(crate)),
-        );
+        test_sublevel_visibility(&parse_quote!(pub(crate)), &parse_quote!(pub(crate)));
     }
 }

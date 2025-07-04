@@ -1,10 +1,9 @@
 use std::borrow::Cow;
 
-use quote::{quote_spanned, TokenStreamExt as _};
+use quote::{TokenStreamExt as _, quote_spanned};
 use syn::{parse_quote, spanned::Spanned as _};
 
-use crate::{syn_util, alias, Alias};
-
+use crate::{Alias, alias, syn_util};
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -39,7 +38,7 @@ impl<'m> quote::ToTokens for Exact<'m> {
         let visibility = map.visibility();
         let super_visibility = syn_util::super_visibility(visibility);
         let super2_visibility = syn_util::super_visibility(&super_visibility);
-    
+
         let item_use = {
             // If path length is one, we may not be allowed to reexport at the desired vis,
             // so export as `pub(super)` and the alias generation will use a convoluted workaround
@@ -54,9 +53,9 @@ impl<'m> quote::ToTokens for Exact<'m> {
                 #use_visibility use #alias_path as #ident;
             }
         };
-    
+
         let parameters = &arguments.args;
-        
+
         let alias_tokens = quote_spanned! { span =>
             #item_use
             #super_visibility type #ident_internal #parameters = #alias_path #parameters;

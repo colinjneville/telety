@@ -1,7 +1,7 @@
 use syn::{
-    Attribute, Fields, Generics, Ident, Item, ItemConst,
-    ItemEnum, ItemExternCrate, ItemFn, ItemForeignMod, ItemImpl, ItemMacro, ItemMod, ItemStatic,
-    ItemStruct, ItemTrait, ItemTraitAlias, ItemType, ItemUnion, ItemUse, Visibility,
+    Attribute, Fields, Generics, Ident, Item, ItemConst, ItemEnum, ItemExternCrate, ItemFn,
+    ItemForeignMod, ItemImpl, ItemMacro, ItemMod, ItemStatic, ItemStruct, ItemTrait,
+    ItemTraitAlias, ItemType, ItemUnion, ItemUse, Visibility,
 };
 
 bitflags::bitflags! {

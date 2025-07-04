@@ -14,15 +14,17 @@ impl Module {
             syn::Item::Struct(item_struct) => (&item_struct.vis, &item_struct.ident),
             syn::Item::Union(item_union) => (&item_union.vis, &item_union.ident),
             syn::Item::Trait(item_trait) => (&item_trait.vis, &item_trait.ident),
-            _ => return Err(syn::Error::new(item.span(), "Only enums, structs, unions, and traits are currently supported")),
+            _ => {
+                return Err(syn::Error::new(
+                    item.span(),
+                    "Only enums, structs, unions, and traits are currently supported",
+                ));
+            }
         };
 
         let visibility = visibility.clone();
         let ident = format_ident!("__telety_alias_map_{ident}");
-        Ok(Self {
-            visibility,
-            ident,
-        })
+        Ok(Self { visibility, ident })
     }
 
     pub fn visibility(&self) -> &syn::Visibility {
@@ -34,24 +36,15 @@ impl Module {
     }
 
     pub fn new_child(&self, suffix: &str) -> Self {
-        let Self {
-            visibility,
-            ident,
-        } = self;
+        let Self { visibility, ident } = self;
         let visibility = visibility.clone();
         let ident = format_ident!("{ident}__{suffix}");
 
-        Self {
-            visibility,
-            ident,
-        }
+        Self { visibility, ident }
     }
 
     pub fn with_contents<C: quote::ToTokens>(&self, contents: &C) -> impl quote::ToTokens + use<C> {
-        let Self {
-            visibility,
-            ident,
-        } = self;
+        let Self { visibility, ident } = self;
 
         quote! {
             #[doc(hidden)]

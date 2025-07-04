@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
 use proc_macro2::{Span, TokenStream};
-use quote::{format_ident, quote, quote_spanned, TokenStreamExt as _};
+use quote::{TokenStreamExt as _, format_ident, quote, quote_spanned};
 use syn::{parse_quote, spanned::Spanned as _};
 
-use crate::{syn_util, version, alias, Alias};
+use crate::{Alias, alias, syn_util, version};
 
 #[repr(transparent)]
 #[derive(Debug)]
@@ -47,7 +47,7 @@ impl<'map> quote::ToTokens for Public<'map> {
             let macro_maker_ident = format_ident!("make_{alias_unique_ident}");
             let submodule_ident = format_ident!("{ident}_mod");
 
-            let macro_vis = syn_util::visibility_macro_export(map.visibility());            
+            let macro_vis = syn_util::visibility_macro_export(map.visibility());
 
             let telety_path_override = map.telety_path();
             let telety_path = telety_path_override

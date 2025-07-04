@@ -1,13 +1,13 @@
 use quote::format_ident;
 use syn::{
-    spanned::Spanned, AngleBracketedGenericArguments, Attribute, GenericArgument,
-    Ident, Item, Path, PathArguments, PathSegment, TypePath, Visibility,
+    AngleBracketedGenericArguments, Attribute, GenericArgument, Ident, Item, Path, PathArguments,
+    PathSegment, TypePath, Visibility, spanned::Spanned,
 };
 
 use crate::{
-    alias,
+    Options, alias,
     item_data::{ItemData as _, Namespaces},
-    syn_util, visitor, Options,
+    syn_util, visitor,
 };
 
 /// Wraps an [Item] which has the `#[telety]` attribute to provide additional information
@@ -76,10 +76,11 @@ impl<'item> Telety<'item> {
 
         let mut alias_map = alias::Map::new_root(
             options.telety_path.clone(),
-            options.converted_containing_path(), 
-            module, 
+            options.converted_containing_path(),
+            module,
             parameters.clone(),
-            unique_ident);
+            unique_ident,
+        );
         alias_map.set_self(&self_type)?;
 
         // Identify all unique non-type parameter types and give them an index
@@ -198,6 +199,6 @@ impl<'item> Telety<'item> {
 
     fn make_unique_ident(options: &Options, suffix: &Ident) -> Ident {
         let module_path_ident = Self::module_path_ident(options);
-        format_ident!("{module_path_ident}_{suffix}") 
+        format_ident!("{module_path_ident}_{suffix}")
     }
 }

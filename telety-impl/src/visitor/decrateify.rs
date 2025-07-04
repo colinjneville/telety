@@ -1,7 +1,5 @@
 use proc_macro2::Span;
-use syn::{
-    Ident, PathArguments, PathSegment, UseTree,
-};
+use syn::{Ident, PathArguments, PathSegment, UseTree};
 
 use super::calling_crate;
 
@@ -26,11 +24,10 @@ impl Default for Decrateify {
     }
 }
 
-
 impl directed_visit::syn::visit::FullMut for Decrateify {
     fn visit_path_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Path)
-    where 
-        D: directed_visit::DirectMut<Self, syn::Path> + ?Sized, 
+    where
+        D: directed_visit::DirectMut<Self, syn::Path> + ?Sized,
     {
         if let Some(first_segment) = node.segments.first_mut() {
             if first_segment.ident == "crate" {
@@ -45,8 +42,8 @@ impl directed_visit::syn::visit::FullMut for Decrateify {
     }
 
     fn visit_item_use_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::ItemUse)
-    where 
-        D: directed_visit::DirectMut<Self, syn::ItemUse> + ?Sized, 
+    where
+        D: directed_visit::DirectMut<Self, syn::ItemUse> + ?Sized,
     {
         if let UseTree::Path(path) = &mut node.tree {
             if path.ident == "crate" {

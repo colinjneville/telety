@@ -18,8 +18,8 @@ pub struct AliasMapArgs {
 
 impl AliasMapArgs {
     pub fn new(
-        map_path: syn::Path, 
-        vis: syn::Visibility, 
+        map_path: syn::Path,
+        vis: syn::Visibility,
         unique_ident: syn::Ident,
         mut generics: syn::Generics,
         telety_path: Option<syn::Path>,
@@ -84,20 +84,18 @@ impl syn::parse::Parse for AliasMapArgs {
         let vis = input.parse()?;
         let unique_ident = input.parse()?;
         let generics = input.parse()?;
-        let where_clause = 
-            input.peek(syn::Token![where])
-                .then(|| input.parse())
-                .transpose()?;
+        let where_clause = input
+            .peek(syn::Token![where])
+            .then(|| input.parse())
+            .transpose()?;
         let unique_ident_comma = input.parse()?;
-        let telety_path = 
-            (!input.peek(syn::Token![,]))
-                .then(|| input.parse())
-                .transpose()?;
+        let telety_path = (!input.peek(syn::Token![,]))
+            .then(|| input.parse())
+            .transpose()?;
         let telety_path_comma = input.parse()?;
-        let self_type = 
-            (!input.peek(syn::Token![,]))
-                .then(|| input.parse())
-                .transpose()?;
+        let self_type = (!input.peek(syn::Token![,]))
+            .then(|| input.parse())
+            .transpose()?;
         let self_type_comma = input.parse()?;
         let aliased_types = syn::punctuated::Punctuated::parse_terminated(input)?;
 

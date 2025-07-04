@@ -1,10 +1,10 @@
 use std::borrow::Cow;
 
 use proc_macro2::{Punct, Spacing, Span, TokenStream};
-use quote::{format_ident, quote, quote_spanned, ToTokens};
-use syn::{parse_quote, parse_quote_spanned, spanned::Spanned as _, Ident, LitInt, Path};
+use quote::{ToTokens, format_ident, quote, quote_spanned};
+use syn::{Ident, LitInt, Path, parse_quote, parse_quote_spanned, spanned::Spanned as _};
 
-use crate::{find_and_replace::SingleToken, Telety};
+use crate::{Telety, find_and_replace::SingleToken};
 
 pub(crate) type GenerateMacroTokens = fn(tele_ty: &Telety) -> Option<TokenStream>;
 

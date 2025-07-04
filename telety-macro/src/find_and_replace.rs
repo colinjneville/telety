@@ -1,7 +1,8 @@
 use proc_macro2::{Group, TokenStream};
 use syn::{
+    Token,
     parse::{Parse, ParseStream},
-    parse2, Token,
+    parse2,
 };
 use telety_impl::find_and_replace::SingleToken;
 
@@ -46,7 +47,7 @@ pub(crate) fn find_and_replace(args: TokenStream) -> syn::Result<TokenStream> {
 
 #[cfg(test)]
 mod test {
-    use quote::{quote, ToTokens as _};
+    use quote::{ToTokens as _, quote};
     use syn::parse_quote;
 
     use super::*;

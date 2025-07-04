@@ -13,7 +13,9 @@ pub(crate) struct Path {
 }
 
 impl Path {
-    pub(crate) fn new(aliased_type: &syn::TypePath) -> Result<(Self, alias::Arguments), alias::Error> {
+    pub(crate) fn new(
+        aliased_type: &syn::TypePath,
+    ) -> Result<(Self, alias::Arguments), alias::Error> {
         let span = aliased_type.span();
 
         if let Some(_qself) = &aliased_type.qself {
@@ -64,7 +66,7 @@ impl cmp::PartialEq for Path {
     }
 }
 
-impl cmp::Eq for Path { }
+impl cmp::Eq for Path {}
 
 impl hash::Hash for Path {
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
@@ -74,7 +76,7 @@ impl hash::Hash for Path {
             const_count,
             truncated_path: aliased_type,
         } = self;
-        
+
         lifetime_count.hash(state);
         type_count.hash(state);
         const_count.hash(state);

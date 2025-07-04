@@ -1,8 +1,7 @@
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::{
-    parse::Parse, parse2, parse_quote, punctuated::Punctuated, spanned::Spanned as _,
-    Attribute, Expr, ExprLit, Ident, Lit, MetaNameValue, Path, Token,
-    Visibility,
+    Attribute, Expr, ExprLit, Ident, Lit, MetaNameValue, Path, Token, Visibility, parse::Parse,
+    parse_quote, parse2, punctuated::Punctuated, spanned::Spanned as _,
 };
 
 use crate::visitor;
@@ -22,8 +21,8 @@ impl Options {
             if attr.path().is_ident("telety") {
                 #[allow(clippy::collapsible_if, reason = "separate mutating if for clarity")]
                 if args
-                        .replace(parse2(attr.meta.require_list()?.tokens.clone())?)
-                        .is_some()
+                    .replace(parse2(attr.meta.require_list()?.tokens.clone())?)
+                    .is_some()
                 {
                     return Err(syn::Error::new(
                         attr.span(),
@@ -46,7 +45,7 @@ impl Options {
         directed_visit::visit_mut(
             &mut directed_visit::syn::direct::FullDefault,
             &mut visitor::Crateify::new(),
-            &mut containing_path
+            &mut containing_path,
         );
 
         containing_path
@@ -65,7 +64,7 @@ impl Parse for Options {
         directed_visit::visit_mut(
             &mut directed_visit::syn::direct::FullDefault,
             &mut visitor::Decrateify::new(),
-            &mut module_path
+            &mut module_path,
         );
 
         let mut telety_path = None;

@@ -22,14 +22,19 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub struct Alias<'map> {
-    pub(crate) map: &'map Map<'map>, 
-    pub(crate) path: &'map Path, 
+    pub(crate) map: &'map Map<'map>,
+    pub(crate) path: &'map Path,
     pub(crate) index: Index,
     pub(crate) arguments: Arguments,
 }
 
 impl<'map> Alias<'map> {
-    pub(crate) fn new(map: &'map Map, path: &'map Path, index: Index, arguments: Arguments) -> Self {
+    pub(crate) fn new(
+        map: &'map Map,
+        path: &'map Path,
+        index: Index,
+        arguments: Arguments,
+    ) -> Self {
         Self {
             map,
             path,
@@ -55,9 +60,8 @@ impl<'map> Alias<'map> {
     pub fn to_type_path(&self) -> syn::TypePath {
         let macro_path = self.to_macro_path();
         // Janky turbofish
-        let arguments = self.arguments.args.as_ref()
-            .map(|a| quote!(::#a));
-        
+        let arguments = self.arguments.args.as_ref().map(|a| quote!(::#a));
+
         parse_quote!(#macro_path #arguments)
     }
 

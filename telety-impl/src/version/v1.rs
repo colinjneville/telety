@@ -1,7 +1,7 @@
 use quote::quote;
 use syn::spanned::Spanned as _;
 
-use crate::{command::ParameterIdents, Command};
+use crate::{Command, command::ParameterIdents};
 
 pub(crate) const VERSION: usize = 1;
 

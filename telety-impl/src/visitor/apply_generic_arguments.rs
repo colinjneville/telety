@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use syn::{
-    parse_quote_spanned,
+    Expr, GenericArgument, GenericParam, Generics, Ident, Lifetime, Type, parse_quote_spanned,
     spanned::Spanned as _,
-    Expr, GenericArgument, GenericParam, Generics, Ident, Lifetime, Type,
 };
 
 pub struct ApplyGenericArguments<'p> {
@@ -90,9 +89,11 @@ impl<'p> ApplyGenericArguments<'p> {
 }
 
 impl<'p> directed_visit::syn::visit::FullMut for ApplyGenericArguments<'p> {
-    fn visit_lifetime_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Lifetime)
-    where 
-        D: directed_visit::DirectMut<Self, syn::Lifetime> + ?Sized, 
+    fn visit_lifetime_mut<D>(
+        visitor: directed_visit::Visitor<'_, D, Self>,
+        node: &mut syn::Lifetime,
+    ) where
+        D: directed_visit::DirectMut<Self, syn::Lifetime> + ?Sized,
     {
         if let Some(lifetime_arg) = visitor.lifetimes.get(node) {
             if let Some(lifetime_arg) = lifetime_arg {
@@ -108,8 +109,8 @@ impl<'p> directed_visit::syn::visit::FullMut for ApplyGenericArguments<'p> {
     }
 
     fn visit_type_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Type)
-    where 
-        D: directed_visit::DirectMut<Self, syn::Type> + ?Sized, 
+    where
+        D: directed_visit::DirectMut<Self, syn::Type> + ?Sized,
     {
         if let Type::Path(path) = node {
             // TODO should check first segment to support some associated types
@@ -125,8 +126,8 @@ impl<'p> directed_visit::syn::visit::FullMut for ApplyGenericArguments<'p> {
     }
 
     fn visit_expr_mut<D>(visitor: directed_visit::Visitor<'_, D, Self>, node: &mut syn::Expr)
-    where 
-        D: directed_visit::DirectMut<Self, syn::Expr> + ?Sized, 
+    where
+        D: directed_visit::DirectMut<Self, syn::Expr> + ?Sized,
     {
         if let Expr::Path(path) = node {
             if let Some(ident) = path.path.get_ident() {

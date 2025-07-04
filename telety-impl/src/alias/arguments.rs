@@ -18,34 +18,32 @@ impl Arguments {
         let mut const_count = 0;
 
         let args = match args {
-            syn::PathArguments::None => 
-                None,
+            syn::PathArguments::None => None,
             syn::PathArguments::AngleBracketed(angle_bracketed_generic_arguments) => {
                 for generic in &angle_bracketed_generic_arguments.args {
                     match generic {
-                        syn::GenericArgument::Lifetime(_lifetime) => 
-                            lifetime_count += 1,
-                        syn::GenericArgument::Type(_type_) => 
-                            type_count += 1,
-                        syn::GenericArgument::Const(_const_) => 
-                            const_count += 1,
+                        syn::GenericArgument::Lifetime(_lifetime) => lifetime_count += 1,
+                        syn::GenericArgument::Type(_type_) => type_count += 1,
+                        syn::GenericArgument::Const(_const_) => const_count += 1,
                         // TODO I believe the only time the following show in TypePaths are type aliases, which (mostly) ignore them
-                        syn::GenericArgument::AssocType(_assoc_type) => { },
-                        syn::GenericArgument::AssocConst(_assoc_const) => { },
-                        syn::GenericArgument::Constraint(_constraint) => { },
-                        _ => { },
+                        syn::GenericArgument::AssocType(_assoc_type) => {}
+                        syn::GenericArgument::AssocConst(_assoc_const) => {}
+                        syn::GenericArgument::Constraint(_constraint) => {}
+                        _ => {}
                     }
                 }
 
-                if const_count == 0  && type_count == 0 && lifetime_count == 0 {
+                if const_count == 0 && type_count == 0 && lifetime_count == 0 {
                     // Treat `<>` the same as no args for simplicity
                     None
                 } else {
                     Some(angle_bracketed_generic_arguments)
                 }
             }
-            syn::PathArguments::Parenthesized(parenthesized_generic_arguments) => 
-                return Err(alias::error::Kind::AssociatedType.error(parenthesized_generic_arguments.span())),
+            syn::PathArguments::Parenthesized(parenthesized_generic_arguments) => {
+                return Err(alias::error::Kind::AssociatedType
+                    .error(parenthesized_generic_arguments.span()));
+            }
         };
 
         Ok(Self {
@@ -65,7 +63,7 @@ impl Arguments {
             let mut lifetime_index = 0;
             let mut type_index = 0;
             let mut const_index = 0;
-            
+
             for generic in &mut args.args {
                 match generic {
                     syn::GenericArgument::Lifetime(lifetime) => {
@@ -73,7 +71,7 @@ impl Arguments {
                         lifetime.ident = format_ident!("l{lifetime_index}");
                         lifetime.ident.set_span(span);
                         lifetime_index += 1;
-                    },
+                    }
                     syn::GenericArgument::Type(type_) => {
                         let span = type_.span();
                         let ident = format_ident!("T{type_index}");
@@ -87,10 +85,10 @@ impl Arguments {
                         const_index += 1;
                     }
                     // TODO I believe the only time the following show in TypePaths are type aliases, which (mostly) ignore them
-                    syn::GenericArgument::AssocType(_assoc_type) => { },
-                    syn::GenericArgument::AssocConst(_assoc_const) => { },
-                    syn::GenericArgument::Constraint(_constraint) => { },
-                    _ => { },
+                    syn::GenericArgument::AssocType(_assoc_type) => {}
+                    syn::GenericArgument::AssocConst(_assoc_const) => {}
+                    syn::GenericArgument::Constraint(_constraint) => {}
+                    _ => {}
                 }
             }
         }

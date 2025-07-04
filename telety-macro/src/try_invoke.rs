@@ -3,8 +3,9 @@ use std::mem;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
+    Macro, Token,
     parse::{Parse, ParseStream},
-    parse2, parse_quote, Macro, Token,
+    parse_quote, parse2,
 };
 
 struct TryInvokeArgs {

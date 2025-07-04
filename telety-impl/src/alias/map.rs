@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use quote::{format_ident, quote, TokenStreamExt as _};
+use quote::{TokenStreamExt as _, format_ident, quote};
 use syn::parse_quote;
 
-use crate::{alias, Alias, syn_util, visitor};
+use crate::{Alias, alias, syn_util, visitor};
 
 #[derive(Debug)]
 pub(crate) struct Root {
@@ -54,7 +54,7 @@ impl<'p> Map<'p> {
             map_path,
             generics,
         };
-        
+
         Self {
             root: OwnedOrRef::Owned(root),
             parent: None,
@@ -92,7 +92,10 @@ impl<'p> Map<'p> {
         Ok(())
     }
 
-    pub(crate) fn full_lookup<'map>(&'map self, ty: &syn::TypePath) -> Result<Option<Alias<'map>>, alias::Error> {
+    pub(crate) fn full_lookup<'map>(
+        &'map self,
+        ty: &syn::TypePath,
+    ) -> Result<Option<Alias<'map>>, alias::Error> {
         match self.local_lookup(ty)? {
             some @ Some(_) => Ok(some),
             None => {
@@ -105,10 +108,18 @@ impl<'p> Map<'p> {
         }
     }
 
-    pub(crate) fn local_lookup<'map>(&'map self, ty: &syn::TypePath) -> Result<Option<Alias<'map>>, alias::Error> {
+    pub(crate) fn local_lookup<'map>(
+        &'map self,
+        ty: &syn::TypePath,
+    ) -> Result<Option<Alias<'map>>, alias::Error> {
         let (path, args) = alias::Path::new(ty)?;
         if let Some((path, (index, _canon_args))) = self.lookup.get_key_value(&path) {
-            Ok(Some(Alias::new(self, path, alias::Index::Secondary(*index), args)))
+            Ok(Some(Alias::new(
+                self,
+                path,
+                alias::Index::Secondary(*index),
+                args,
+            )))
         } else {
             Ok(None)
         }
@@ -130,10 +141,10 @@ impl<'p> Map<'p> {
     pub fn iter_aliases(&self) -> impl Iterator<Item = Alias> {
         let primary_aliases = self.local_get_self().into_iter();
 
-        let secondary_aliases = self.lookup
-            .iter() 
-            .map(|(path, (index, args))| Alias::new(self, path, alias::Index::Secondary(*index), args.clone()));
-        
+        let secondary_aliases = self.lookup.iter().map(|(path, (index, args))| {
+            Alias::new(self, path, alias::Index::Secondary(*index), args.clone())
+        });
+
         primary_aliases.chain(secondary_aliases)
     }
 }
@@ -167,7 +178,7 @@ impl<'p> Map<'p> {
         &self.root().generics
     }
 
-    /// Register a [syn::TypePath] in the [Map]. If the exact (i.e. identical tokens, not equivalent Rust types) type 
+    /// Register a [syn::TypePath] in the [Map]. If the exact (i.e. identical tokens, not equivalent Rust types) type
     /// already exists in the map, this is a no-op. Maps constructed with the same parameters and order of
     /// inserts will yield the same [Alias]es.
     pub fn insert(&mut self, ty: &syn::TypePath) -> Result<bool, alias::Error> {
@@ -199,7 +210,10 @@ impl<'p> Map<'p> {
         }
     }
 
-    pub fn get_alias<'map>(&'map self, ty: &syn::TypePath) -> Result<Option<Alias<'map>>, alias::Error> {
+    pub fn get_alias<'map>(
+        &'map self,
+        ty: &syn::TypePath,
+    ) -> Result<Option<Alias<'map>>, alias::Error> {
         if ty == &parse_quote!(Self) {
             Ok(self.get_self())
         } else {

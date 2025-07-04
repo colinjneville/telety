@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::{parse2, Item};
+use syn::{Item, parse2};
 use telety_impl::visitor;
 
 pub(crate) fn crateify(arg: TokenStream) -> syn::Result<TokenStream> {
@@ -8,7 +8,7 @@ pub(crate) fn crateify(arg: TokenStream) -> syn::Result<TokenStream> {
     directed_visit::visit_mut(
         &mut directed_visit::syn::direct::FullDefault,
         &mut visitor::Crateify::new(),
-        &mut item
+        &mut item,
     );
 
     Ok(item.to_token_stream())

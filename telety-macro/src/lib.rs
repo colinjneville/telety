@@ -5,7 +5,7 @@ mod try_invoke;
 
 /// Enable telety for an item.  
 /// The first argument must be the path to the current module (e.g. `#[telety(crate::my_mod)]`).  
-/// 
+///
 /// Optional arguments inlcude:  
 /// * telety_path - Provide a path to the contents of the telety crate.  
 ///   `#[telety(crate::my_mod, telety_path = "::renamed_telety")]`  

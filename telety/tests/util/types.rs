@@ -57,7 +57,6 @@ pub enum AssociatedTypes {
 }
 
 #[telety(crate::util::types)]
-pub trait GenericParam<Param>
-{
+pub trait GenericParam<Param> {
     fn apply_item(param: Param) -> Param;
 }
