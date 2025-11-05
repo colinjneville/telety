@@ -29,13 +29,13 @@ impl directed_visit::syn::visit::FullMut for Decrateify {
     where
         D: directed_visit::DirectMut<Self, syn::Path> + ?Sized,
     {
-        if let Some(first_segment) = node.segments.first_mut() {
-            if first_segment.ident == "crate" {
-                let mut segment = visitor.0.clone();
-                segment.ident.set_span(first_segment.ident.span());
-                *first_segment = segment;
-                node.leading_colon = Some(Default::default());
-            }
+        if let Some(first_segment) = node.segments.first_mut()
+            && first_segment.ident == "crate"
+        {
+            let mut segment = visitor.0.clone();
+            segment.ident.set_span(first_segment.ident.span());
+            *first_segment = segment;
+            node.leading_colon = Some(Default::default());
         }
 
         directed_visit::Visitor::visit_mut(visitor, node);
@@ -45,13 +45,13 @@ impl directed_visit::syn::visit::FullMut for Decrateify {
     where
         D: directed_visit::DirectMut<Self, syn::ItemUse> + ?Sized,
     {
-        if let UseTree::Path(path) = &mut node.tree {
-            if path.ident == "crate" {
-                let mut ident = visitor.0.ident.clone();
-                ident.set_span(path.ident.span());
-                path.ident = ident;
-                node.leading_colon = Some(Default::default());
-            }
+        if let UseTree::Path(path) = &mut node.tree
+            && path.ident == "crate"
+        {
+            let mut ident = visitor.0.ident.clone();
+            ident.set_span(path.ident.span());
+            path.ident = ident;
+            node.leading_colon = Some(Default::default());
         }
 
         directed_visit::Visitor::visit_mut(visitor, node);

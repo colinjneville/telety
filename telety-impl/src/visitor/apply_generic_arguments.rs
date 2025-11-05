@@ -114,11 +114,11 @@ impl<'p> directed_visit::syn::visit::FullMut for ApplyGenericArguments<'p> {
     {
         if let Type::Path(path) = node {
             // TODO should check first segment to support some associated types
-            if let Some(ident) = path.path.get_ident() {
-                if let Some(value) = visitor.types.get(ident) {
-                    *node = value.clone();
-                    return;
-                }
+            if let Some(ident) = path.path.get_ident()
+                && let Some(value) = visitor.types.get(ident)
+            {
+                *node = value.clone();
+                return;
             }
         }
 
@@ -129,13 +129,12 @@ impl<'p> directed_visit::syn::visit::FullMut for ApplyGenericArguments<'p> {
     where
         D: directed_visit::DirectMut<Self, syn::Expr> + ?Sized,
     {
-        if let Expr::Path(path) = node {
-            if let Some(ident) = path.path.get_ident() {
-                if let Some(value) = visitor.consts.get(ident) {
-                    *node = value.clone();
-                    return;
-                }
-            }
+        if let Expr::Path(path) = node
+            && let Some(ident) = path.path.get_ident()
+            && let Some(value) = visitor.consts.get(ident)
+        {
+            *node = value.clone();
+            return;
         }
 
         directed_visit::Visitor::visit_mut(visitor, node);

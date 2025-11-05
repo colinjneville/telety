@@ -35,21 +35,20 @@ impl<'map> directed_visit::syn::visit::FullMut for ApplyAliases<'map> {
             // Replace `Self` with a global path
             // TODO Associated types, if ever supported, would also be done here
             if node.qself.is_none() && node.path.is_ident("Self") {
-                if visitor.apply_associated_types {
-                    if let Some(self_mapped) = visitor.map.get_self() {
-                        node.path = self_mapped.to_path();
-                    }
+                if visitor.apply_associated_types
+                    && let Some(self_mapped) = visitor.map.get_self()
+                {
+                    node.path = self_mapped.to_path();
                 }
                 break 'apply;
             }
 
-            if visitor.apply_free_types {
-                if node.qself.is_none() {
-                    if let Ok(Some(mapped)) = visitor.map.get_alias(&node.path) {
-                        node.path = mapped.to_path();
-                        break 'apply;
-                    }
-                }
+            if visitor.apply_free_types
+                && node.qself.is_none()
+                && let Ok(Some(mapped)) = visitor.map.get_alias(&node.path)
+            {
+                node.path = mapped.to_path();
+                break 'apply;
             }
         };
 
@@ -62,45 +61,41 @@ impl<'map> directed_visit::syn::visit::FullMut for ApplyAliases<'map> {
     ) where
         D: directed_visit::DirectMut<Self, syn::TraitBound> + ?Sized,
     {
-        if visitor.apply_free_types {
-            if let Ok(Some(mapped)) = visitor.map.get_alias(&node.path) {
-                let mut kept = vec![];
+        if visitor.apply_free_types
+            && let Ok(Some(mapped)) = visitor.map.get_alias(&node.path)
+        {
+            let mut kept = vec![];
 
-                if let Some(last_segment) = node.path.segments.last_mut() {
-                    if let syn::PathArguments::AngleBracketed(args) =
-                        std::mem::take(&mut last_segment.arguments)
+            if let Some(last_segment) = node.path.segments.last_mut()
+                && let syn::PathArguments::AngleBracketed(args) =
+                    std::mem::take(&mut last_segment.arguments)
+            {
+                for arg in args.args {
+                    if let arg @ (syn::GenericArgument::AssocType(_)
+                    | syn::GenericArgument::AssocConst(_)
+                    | syn::GenericArgument::Constraint(_)) = arg
                     {
-                        for arg in args.args {
-                            if let arg @ (syn::GenericArgument::AssocType(_)
-                            | syn::GenericArgument::AssocConst(_)
-                            | syn::GenericArgument::Constraint(_)) = arg
-                            {
-                                kept.push(arg);
-                            }
-                        }
+                        kept.push(arg);
                     }
                 }
+            }
 
-                node.path = mapped.to_path();
-                if let Some(last_segment) = node.path.segments.last_mut() {
-                    if !kept.is_empty() {
-                        if let syn::PathArguments::None = &mut last_segment.arguments {
-                            last_segment.arguments = syn::PathArguments::AngleBracketed(
-                                syn::AngleBracketedGenericArguments {
-                                    colon2_token: Default::default(),
-                                    lt_token: Default::default(),
-                                    args: Default::default(),
-                                    gt_token: Default::default(),
-                                },
-                            );
-                        }
+            node.path = mapped.to_path();
+            if let Some(last_segment) = node.path.segments.last_mut()
+                && !kept.is_empty()
+            {
+                if let syn::PathArguments::None = &mut last_segment.arguments {
+                    last_segment.arguments =
+                        syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+                            colon2_token: Default::default(),
+                            lt_token: Default::default(),
+                            args: Default::default(),
+                            gt_token: Default::default(),
+                        });
+                }
 
-                        if let syn::PathArguments::AngleBracketed(args) =
-                            &mut last_segment.arguments
-                        {
-                            args.args.extend(kept);
-                        }
-                    }
+                if let syn::PathArguments::AngleBracketed(args) = &mut last_segment.arguments {
+                    args.args.extend(kept);
                 }
             }
         }

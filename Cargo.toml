@@ -8,9 +8,9 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-telety = { version = "0.3.0", path = "telety" }
-telety-impl = { version = "0.3.0", path = "telety-impl" }
-telety-macro = { version = "0.3.0", path = "telety-macro" }
+telety = { version = "0.4.0", path = "telety" }
+telety-impl = { version = "0.4.0", path = "telety-impl" }
+telety-macro = { version = "0.4.0", path = "telety-macro" }
 
 proc-macro2 = "1.0.69"
 quote = "1.0.33"

@@ -63,13 +63,12 @@ impl<'m, 'map> directed_visit::syn::visit::Full for IdentifyAliases<'m, 'map> {
     where
         D: directed_visit::Direct<Self, syn::TypePath> + ?Sized,
     {
-        if let Some(first_segment) = node.path.segments.first() {
-            if node.path.leading_colon.is_none()
-                && (first_segment.ident == "Self" || visitor.is_parameter(&first_segment.ident))
-            {
-                // TypePath is a type parameter or associated type of one
-                return;
-            }
+        if let Some(first_segment) = node.path.segments.first()
+            && node.path.leading_colon.is_none()
+            && (first_segment.ident == "Self" || visitor.is_parameter(&first_segment.ident))
+        {
+            // TypePath is a type parameter or associated type of one
+            return;
         }
 
         // No error handling, we just alias everything we are able to

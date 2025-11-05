@@ -23,13 +23,13 @@ pub struct Telety<'item> {
 impl<'item> Telety<'item> {
     #[doc(hidden)]
     pub fn new_with_options(item: &'item Item, options: Options) -> syn::Result<Self> {
-        if let Some(ident) = item.ident() {
-            if ident.namespaces.contains(Namespaces::Macro) {
-                return Err(syn::Error::new(
-                    item.span(),
-                    "Cannot be applied to items in the macro namespace",
-                ));
-            }
+        if let Some(ident) = item.ident()
+            && ident.namespaces.contains(Namespaces::Macro)
+        {
+            return Err(syn::Error::new(
+                item.span(),
+                "Cannot be applied to items in the macro namespace",
+            ));
         }
 
         let Some(macro_ident) = options

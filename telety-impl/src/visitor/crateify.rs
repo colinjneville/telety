@@ -29,11 +29,11 @@ impl directed_visit::syn::visit::FullMut for Crateify {
     where
         D: directed_visit::DirectMut<Self, syn::Path> + ?Sized,
     {
-        if let Some(first_segment) = node.segments.first_mut() {
-            if *first_segment == visitor.0 {
-                first_segment.ident = Ident::new("crate", first_segment.ident.span());
-                node.leading_colon = None;
-            }
+        if let Some(first_segment) = node.segments.first_mut()
+            && *first_segment == visitor.0
+        {
+            first_segment.ident = Ident::new("crate", first_segment.ident.span());
+            node.leading_colon = None;
         }
 
         directed_visit::Visitor::visit_mut(visitor, node);
@@ -43,11 +43,11 @@ impl directed_visit::syn::visit::FullMut for Crateify {
     where
         D: directed_visit::DirectMut<Self, syn::ItemUse> + ?Sized,
     {
-        if let UseTree::Path(path) = &mut node.tree {
-            if path.ident == visitor.0.ident {
-                path.ident = Ident::new("crate", path.ident.span());
-                node.leading_colon = None;
-            }
+        if let UseTree::Path(path) = &mut node.tree
+            && path.ident == visitor.0.ident
+        {
+            path.ident = Ident::new("crate", path.ident.span());
+            node.leading_colon = None;
         }
 
         directed_visit::Visitor::visit_mut(visitor, node);

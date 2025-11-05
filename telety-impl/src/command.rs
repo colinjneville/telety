@@ -212,38 +212,38 @@ impl ToTokens for Apply {
 
         let mut fallback = self.fallback.as_ref().map(|f| f.to_token_stream());
 
-        if let Some(fallback) = fallback.as_mut() {
-            if let Some(unique_macro_ident) = &self.unique_macro_ident {
-                let macro_wrapper = |contents: &TokenStream| {
-                    // Replace `$` in the original content with `$dollar dollar`
-                    // because we have 2 extra layers of macro rules indirection
-                    let contents = crate::find_and_replace::find_and_replace(
-                        Punct::new('$', Spacing::Alone),
-                        quote!($dollar dollar),
-                        contents.into_token_stream(),
-                    );
+        if let Some(fallback) = fallback.as_mut()
+            && let Some(unique_macro_ident) = &self.unique_macro_ident
+        {
+            let macro_wrapper = |contents: &TokenStream| {
+                // Replace `$` in the original content with `$dollar dollar`
+                // because we have 2 extra layers of macro rules indirection
+                let contents = crate::find_and_replace::find_and_replace(
+                    Punct::new('$', Spacing::Alone),
+                    quote!($dollar dollar),
+                    contents.into_token_stream(),
+                );
 
-                    quote_spanned! { span =>
-                        // Export a macro...
-                        #[doc(hidden)]
-                        #[macro_export]
-                        macro_rules! #unique_macro_ident {
-                            ($dollar:tt) => {
-                                // which defines a macro, ...
-                                macro_rules! #textual_macro_ident {
-                                    ($dollar dollar:tt) => {
-                                        // which expands to our actual contents
-                                        #contents
-                                    };
-                                }
-                            };
-                        }
+                quote_spanned! { span =>
+                    // Export a macro...
+                    #[doc(hidden)]
+                    #[macro_export]
+                    macro_rules! #unique_macro_ident {
+                        ($dollar:tt) => {
+                            // which defines a macro, ...
+                            macro_rules! #textual_macro_ident {
+                                ($dollar dollar:tt) => {
+                                    // which expands to our actual contents
+                                    #contents
+                                };
+                            }
+                        };
                     }
-                };
+                }
+            };
 
-                *fallback = macro_wrapper(fallback);
-                haystack = macro_wrapper(&haystack);
-            }
+            *fallback = macro_wrapper(fallback);
+            haystack = macro_wrapper(&haystack);
         }
 
         let mut output = parse_quote_spanned! { span =>
