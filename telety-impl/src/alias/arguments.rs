@@ -25,7 +25,7 @@ impl Arguments {
                         syn::GenericArgument::Lifetime(_lifetime) => lifetime_count += 1,
                         syn::GenericArgument::Type(_type_) => type_count += 1,
                         syn::GenericArgument::Const(_const_) => const_count += 1,
-                        // TODO I believe the only time the following show in TypePaths are type aliases, which (mostly) ignore them
+
                         syn::GenericArgument::AssocType(_assoc_type) => {}
                         syn::GenericArgument::AssocConst(_assoc_const) => {}
                         syn::GenericArgument::Constraint(_constraint) => {}

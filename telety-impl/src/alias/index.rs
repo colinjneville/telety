@@ -10,15 +10,18 @@ pub(crate) enum Index {
 }
 
 impl Index {
-    pub(crate) fn ident(self) -> syn::Ident {
+    pub(crate) fn ident(self, friendly_ident: &syn::Ident) -> syn::Ident {
+        format_ident!("{}__{friendly_ident}", self.ident_core())
+    }
+
+    pub(crate) fn ident_internal(self, friendly_ident: &syn::Ident) -> syn::Ident {
+        format_ident!("{}Internal__{friendly_ident}", self.ident_core())
+    }
+
+    pub(crate) fn ident_core(self) -> syn::Ident {
         match self {
             Self::Primary => format_ident!("AliasSelf"),
             Self::Secondary(index) => format_ident!("Alias{index}"),
         }
-    }
-
-    pub(crate) fn ident_internal(self) -> syn::Ident {
-        let ident = self.ident();
-        format_ident!("{ident}Internal")
     }
 }

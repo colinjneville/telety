@@ -73,7 +73,19 @@ impl<'m, 'map> directed_visit::syn::visit::Full for IdentifyAliases<'m, 'map> {
         }
 
         // No error handling, we just alias everything we are able to
-        let _ = visitor.alias_map.insert(node);
+        let _ = visitor.alias_map.insert_type(node);
+
+        directed_visit::Visitor::visit(visitor, node);
+    }
+
+    fn visit_trait_bound<D>(
+        mut visitor: directed_visit::Visitor<'_, D, Self>,
+        node: &syn::TraitBound,
+    ) where
+        D: directed_visit::Direct<Self, syn::TraitBound> + ?Sized,
+    {
+        // No error handling, we just alias everything we are able to
+        let _ = visitor.alias_map.insert_trait(&node.path);
         directed_visit::Visitor::visit(visitor, node);
     }
 }

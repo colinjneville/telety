@@ -1,7 +1,7 @@
 use quote::format_ident;
 use syn::{
     AngleBracketedGenericArguments, Attribute, GenericArgument, Ident, Item, Path, PathArguments,
-    PathSegment, TypePath, Visibility, spanned::Spanned,
+    PathSegment, Visibility, spanned::Spanned,
 };
 
 use crate::{
@@ -69,7 +69,7 @@ impl<'item> Telety<'item> {
                 arguments,
             });
 
-            TypePath { qself: None, path }
+            path
         };
 
         let module = alias::Module::from_named_item(item)?;
@@ -80,6 +80,7 @@ impl<'item> Telety<'item> {
             module,
             parameters.clone(),
             unique_ident,
+            &options,
         );
         alias_map.set_self(&self_type)?;
 
@@ -101,8 +102,8 @@ impl<'item> Telety<'item> {
         })
     }
 
-    /// Generate telety information for the [Item].  
-    /// The item must have a proper `#[telety(...)]` attribute.  
+    /// Generate telety information for the [Item].
+    /// The item must have a proper `#[telety(...)]` attribute.
     /// Usually this item will come from the telety-generated macro with the same name as the item.
     pub fn new(item: &'item Item) -> syn::Result<Self> {
         let options = Options::from_attrs(item.attrs())?;
@@ -116,7 +117,7 @@ impl<'item> Telety<'item> {
 
     /// Provides the [alias::Map] for this item, which describes the mapping
     /// of types appearing in the item to the aliases created for them.
-    pub fn alias_map(&self) -> &alias::Map {
+    pub fn alias_map(&self) -> &alias::Map<'_> {
         &self.alias_map
     }
 
@@ -126,7 +127,7 @@ impl<'item> Telety<'item> {
     }
 
     /// Create a visitor which substitutes generic parameters as if this type were monomorphized
-    /// with the provided generic arguments.  
+    /// with the provided generic arguments.
     /// For example, if we have a type:
     /// ```rust,ignore
     /// #[telety(crate)]
@@ -134,12 +135,12 @@ impl<'item> Telety<'item> {
     /// ```
     /// and provided the arguments `[i32, u64]`,
     /// the visitor would replace types `T` with `i32`,
-    /// `U` with `u64`, and `V` with `i32`.  
+    /// `U` with `u64`, and `V` with `i32`.
     /// See [syn::visit_mut].
     pub fn generics_visitor<'a>(
         &self,
         generic_arguments: impl IntoIterator<Item = &'a GenericArgument>,
-    ) -> syn::Result<visitor::ApplyGenericArguments> {
+    ) -> syn::Result<visitor::ApplyGenericArguments<'_>> {
         let Some(parameters) = self.item.generics() else {
             return Err(syn::Error::new(
                 self.item.span(),

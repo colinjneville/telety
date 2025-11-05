@@ -12,6 +12,7 @@ pub struct Options {
     pub macro_ident: Option<Ident>,
     pub visibility: Option<Visibility>,
     pub proxy: Option<Path>,
+    pub alias_traits: Option<bool>,
 }
 
 impl Options {
@@ -71,6 +72,7 @@ impl Parse for Options {
         let mut macro_ident = None;
         let mut visibility = None;
         let mut proxy = None;
+        let mut alias_traits = None;
 
         if let Some(_comma) = input.parse::<Option<Token![,]>>()? {
             let named_args: Punctuated<MetaNameValue, Token![,]> =
@@ -96,6 +98,17 @@ impl Parse for Options {
                         visibility = Some(value.parse()?);
                     } else if ident == "proxy" {
                         proxy = Some(value.parse()?);
+                    } else if ident == "alias_traits" {
+                        if value.value() == "always" {
+                            alias_traits = Some(true);
+                        } else if value.value() == "never" {
+                            alias_traits = Some(false);
+                        } else {
+                            return Err(syn::Error::new(
+                                value.span(),
+                                "Expected \"always\" or \"never\"",
+                            ));
+                        }
                     } else {
                         return Err(syn::Error::new(
                             named_arg.path.span(),
@@ -117,6 +130,7 @@ impl Parse for Options {
             macro_ident,
             visibility,
             proxy,
+            alias_traits,
         })
     }
 }
@@ -129,6 +143,7 @@ impl ToTokens for Options {
             macro_ident,
             visibility,
             proxy,
+            alias_traits,
         } = self;
 
         // Convert to string literals
@@ -156,6 +171,10 @@ impl ToTokens for Options {
             .as_ref()
             .map(ToString::to_string)
             .into_iter();
+        let alias_traits = alias_traits
+            .as_ref()
+            .map(|always| if *always { "always" } else { "never" })
+            .into_iter();
 
         quote!(
             #module_path
@@ -163,6 +182,7 @@ impl ToTokens for Options {
             #(, macro_ident = #macro_ident)*
             #(, visibility = #visibility)*
             #(, proxy = #proxy)*
+            #(, alias_traits = #alias_traits)*
         )
         .to_tokens(tokens);
     }

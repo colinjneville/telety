@@ -22,17 +22,17 @@ impl<'m> quote::ToTokens for Exact<'m> {
             path,
             index,
             ref arguments,
+            kind,
         } = self.0;
 
-        if let alias::Index::Primary = index {
-            // We know a telety macro exists for this type, so all we need is to unify
-            // the macro and the trait in the public alias.
+        if index == alias::Index::Primary {
+            // We already know the full path to Self, so we don't need an exact alias
             return;
         }
 
         let alias_path = &path.truncated_path;
-        let ident = index.ident();
-        let ident_internal = index.ident_internal();
+        let ident = index.ident(path.friendly_path());
+        let ident_internal = index.ident_internal(path.friendly_path());
 
         let span = path.truncated_path.span();
         let visibility = map.visibility();
@@ -42,7 +42,9 @@ impl<'m> quote::ToTokens for Exact<'m> {
         let item_use = {
             // If path length is one, we may not be allowed to reexport at the desired vis,
             // so export as `pub(super)` and the alias generation will use a convoluted workaround
-            let use_visibility = if alias_path.segments.len() == 1 {
+            let use_visibility = if kind == alias::Kind::Trait {
+                Cow::Borrowed(&super2_visibility)
+            } else if alias_path.segments.len() == 1 {
                 Cow::Owned(parse_quote!(pub(super)))
             } else {
                 Cow::Borrowed(&super2_visibility)
@@ -53,12 +55,20 @@ impl<'m> quote::ToTokens for Exact<'m> {
                 #use_visibility use #alias_path as #ident;
             }
         };
-
-        let parameters = &arguments.args;
+        let item_type = match kind {
+            alias::Kind::Type => {
+                let parameters = &arguments.args;
+                Some(quote_spanned! { span =>
+                    #super_visibility type #ident_internal #parameters = #alias_path #parameters;
+                })
+            }
+            // Traits can't have type aliases
+            alias::Kind::Trait => None,
+        };
 
         let alias_tokens = quote_spanned! { span =>
             #item_use
-            #super_visibility type #ident_internal #parameters = #alias_path #parameters;
+            #item_type
         };
 
         tokens.append_all(alias_tokens);

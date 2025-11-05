@@ -200,6 +200,11 @@ pub mod util {
 pub mod __private {
     pub use telety_macro::crateify;
     pub use telety_macro::find_and_replace;
+
+    /// The technique that allows aliasing privately `use`d public types does not work for traits.
+    /// You must refer to the trait with a crate/module prefix in order to use the alias
+    /// (e.g. `cmp::PartialEq` instead of `PartialEq`).
+    pub trait SingleSegmentTraitAliasesAreNotSupported {}
 }
 
 #[doc(inline)]

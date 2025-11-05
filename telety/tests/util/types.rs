@@ -60,3 +60,28 @@ pub enum AssociatedTypes {
 pub trait GenericParam<Param> {
     fn apply_item(param: Param) -> Param;
 }
+
+pub trait PubTrait {}
+
+trait PrivateTrait {}
+
+mod trait_mod {
+    pub use super::PubTrait;
+}
+
+#[telety(crate::util::types, alias_traits = "always")]
+pub trait AlwaysAlias: PubTrait {
+    fn f<T: PubTrait>();
+}
+
+#[allow(private_bounds)]
+#[telety(crate::util::types, alias_traits = "never")]
+pub trait NeverAlias: PrivateTrait {
+    fn f<T: PrivateTrait>();
+}
+
+#[allow(private_bounds)]
+#[telety(crate::util::types)]
+pub trait AliasMultiPathsOnly: PrivateTrait {
+    fn f<T: trait_mod::PubTrait>();
+}

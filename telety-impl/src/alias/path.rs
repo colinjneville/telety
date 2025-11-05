@@ -13,18 +13,12 @@ pub(crate) struct Path {
 }
 
 impl Path {
-    pub(crate) fn new(
-        aliased_type: &syn::TypePath,
-    ) -> Result<(Self, alias::Arguments), alias::Error> {
+    pub(crate) fn new(aliased_type: &syn::Path) -> Result<(Self, alias::Arguments), alias::Error> {
         let span = aliased_type.span();
-
-        if let Some(_qself) = &aliased_type.qself {
-            return Err(alias::Error::new(span, alias::error::Kind::AssociatedType));
-        }
 
         let mut args = alias::Arguments::default();
 
-        let mut truncated_path = aliased_type.path.clone();
+        let mut truncated_path = aliased_type.clone();
 
         for segment in &mut truncated_path.segments {
             let segment_args = mem::take(&mut segment.arguments);
@@ -47,6 +41,15 @@ impl Path {
         };
 
         Ok((path, args))
+    }
+
+    pub(crate) fn friendly_path(&self) -> &syn::Ident {
+        let last_segment = self
+            .truncated_path
+            .segments
+            .last()
+            .expect("Path must have at least 1 segment");
+        &last_segment.ident
     }
 }
 

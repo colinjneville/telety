@@ -6,6 +6,8 @@ mod exact;
 pub(crate) use exact::Exact;
 mod index;
 pub(crate) use index::Index;
+mod kind;
+pub use kind::Kind;
 mod map;
 pub use map::Map;
 mod module;
@@ -26,6 +28,7 @@ pub struct Alias<'map> {
     pub(crate) path: &'map Path,
     pub(crate) index: Index,
     pub(crate) arguments: Arguments,
+    pub(crate) kind: Kind,
 }
 
 impl<'map> Alias<'map> {
@@ -34,12 +37,14 @@ impl<'map> Alias<'map> {
         path: &'map Path,
         index: Index,
         arguments: Arguments,
+        kind: Kind,
     ) -> Self {
         Self {
             map,
             path,
             index,
             arguments,
+            kind,
         }
     }
 
@@ -52,12 +57,12 @@ impl<'map> Alias<'map> {
     pub fn to_macro_path(&self) -> syn::Path {
         let path = self.map.map_path();
         let module = self.map.module().ident();
-        let alias_ident = self.index.ident();
+        let alias_ident = self.index.ident(self.path.friendly_path());
 
         parse_quote!(#path::#module::#alias_ident)
     }
 
-    pub fn to_type_path(&self) -> syn::TypePath {
+    pub fn to_path(&self) -> syn::Path {
         let macro_path = self.to_macro_path();
         // Janky turbofish
         let arguments = self.arguments.args.as_ref().map(|a| quote!(::#a));
@@ -67,6 +72,10 @@ impl<'map> Alias<'map> {
 
     pub fn generic_arguments(&self) -> Option<&syn::AngleBracketedGenericArguments> {
         self.arguments.args.as_ref()
+    }
+
+    pub fn kind(&self) -> Kind {
+        self.kind
     }
 
     pub(crate) fn exact(self) -> Exact<'map> {

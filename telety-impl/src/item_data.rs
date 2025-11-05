@@ -516,6 +516,7 @@ fn item_variant_trait(item: &Item) -> &dyn ItemData {
     }
 }
 
+#[allow(dead_code)]
 fn item_variant_trait_mut(item: &mut Item) -> &mut dyn ItemData {
     match item {
         Item::Const(i) => i,

@@ -23,19 +23,25 @@ impl<'map> quote::ToTokens for Public<'map> {
             path,
             index,
             ref arguments,
+            kind,
         } = self.0;
 
-        let ident = index.ident();
+        let ident = index.ident(path.friendly_path());
 
         let visibility = map.visibility();
         let super_visibility = syn_util::super_visibility(visibility);
 
-        let alias_tokens = if let alias::Index::Primary = index {
+        // If the alias is for Self, we have a full path, and don't need any glob shenanigans
+        let alias_tokens = if index == alias::Index::Primary {
             let aliased_type_path = &path.truncated_path;
 
             quote!(#super_visibility use #aliased_type_path as #ident;)
         } else {
-            let ident_internal = index.ident_internal();
+            // Traits cannot have `type` aliases, so we can't do conditional macro combination
+            // or the visibility workaround
+            let use_vis_workaround = kind != alias::Kind::Trait;
+
+            let ident_internal = index.ident_internal(path.friendly_path());
 
             let aliased_path = &path.truncated_path;
             let span = aliased_path.span();
@@ -54,71 +60,82 @@ impl<'map> quote::ToTokens for Public<'map> {
                 .map(Cow::Borrowed)
                 .unwrap_or_else(|| Cow::Owned(parse_quote!(::telety)));
 
-            // We are allowed to export items *in* private modules at their original visibility. e.g.
-            // ```rust
-            // use my_crate;
-            // pub use my_crate::MyPubStruct;
-            // ```
-            // But we can't re-export items themselves at greater visibility than our import, even if their
-            // original visibility is greater. This is invalid:
-            // ```rust
-            // use my_crate::MyPubStruct;
-            // pub use MyPubStruct as MyPubReexport;
-            // ```
-            // We can work around this, but it requires 2 extra exported macros per item, so prefer the simple
-            // way if we have a multi-segment path as our type.
-            if aliased_path.segments.len() == 1 {
-                let needle = syn::Ident::new("__needle", Span::call_site());
+            if use_vis_workaround {
+                // We are allowed to export items *in* private modules at their original visibility. e.g.
+                // ```rust
+                // use my_crate;
+                // pub use my_crate::MyPubStruct;
+                // ```
+                // But we can't re-export items themselves at greater visibility than our import, even if their
+                // original visibility is greater. This is invalid:
+                // ```rust
+                // use my_crate::MyPubStruct;
+                // pub use MyPubStruct as MyPubReexport;
+                // ```
+                // We can work around this, but it requires 2 extra exported macros per item, so prefer the simple
+                // way if we have a multi-segment path as our type.
+                if aliased_path.segments.len() == 1 {
+                    let needle = syn::Ident::new("__needle", Span::call_site());
 
-                let haystack = quote! {
-                    #[doc(hidden)]
-                    #macro_vis
-                    macro_rules! #alias_unique_ident {
-                        ($($tokens:tt)*) => {
-                            #telety_path::__private::crateify! {
-                                #needle!($($tokens)*);
+                    let haystack = quote! {
+                        #[doc(hidden)]
+                        #macro_vis
+                        macro_rules! #alias_unique_ident {
+                            ($($tokens:tt)*) => {
+                                #telety_path::__private::crateify! {
+                                    #needle!($($tokens)*);
+                                };
                             };
-                        };
+                        }
+                    };
+
+                    let mut exported_apply = version::v0::PATH
+                        .apply(parse_quote!(self::exact::#ident), needle.clone(), &haystack)
+                        .with_fallback(TokenStream::new())
+                        .with_macro_forwarding(macro_maker_ident);
+
+                    if let Some(telety_path_override) = telety_path_override {
+                        exported_apply =
+                            exported_apply.with_telety_path(telety_path_override.clone());
                     }
-                };
 
-                let mut exported_apply = version::v0::PATH
-                    .apply(parse_quote!(self::exact::#ident), needle.clone(), &haystack)
-                    .with_fallback(TokenStream::new())
-                    .with_macro_forwarding(macro_maker_ident);
+                    quote! {
+                        // Create an exported macro. If the type's macro existed, it is a forwarder.
+                        // If it did not exist, it is a noop
+                        #exported_apply
 
-                if let Some(telety_path_override) = telety_path_override {
-                    exported_apply = exported_apply.with_telety_path(telety_path_override.clone());
-                }
+                        // Create an alias for just the type
+                        #super_visibility type #alias_unique_ident #parameters = self::exact::#ident_internal #parameters;
 
-                quote! {
-                    // Create an exported macro. If the type's macro existed, it is a forwarder.
-                    // If it did not exist, it is a noop
-                    #exported_apply
+                        #super_visibility use #alias_unique_ident as #ident;
+                    }
+                } else {
+                    let super2_visibility = syn_util::super_visibility(&super_visibility);
+                    let super3_visibility = syn_util::super_visibility(&super2_visibility);
 
-                    // Create an alias for just the type
-                    #super_visibility type #alias_unique_ident #parameters = self::exact::#ident_internal #parameters;
+                    quote_spanned! { span =>
+                        // Setup for a glob import
+                        mod #submodule_ident {
+                            #super2_visibility use super::exact::#ident as #ident;
 
-                    #super_visibility use #alias_unique_ident as #ident;
+                            pub(super) mod globbed {
+                                // Use the macro if it exists. The type will be imported, but...
+                                #super3_visibility use super::*;
+                                // It is overwritten by our 'reduced generics' type alias
+                                #super3_visibility type #ident #parameters = super::super::exact::#ident_internal #parameters;
+                            }
+                        }
+
+                        #super_visibility use #submodule_ident::globbed::#ident;
+                    }
                 }
             } else {
-                let super2_visibility = syn_util::super_visibility(&super_visibility);
-                let super3_visibility = syn_util::super_visibility(&super2_visibility);
-
+                // For traits, we can't use the `type` workaround, so correct visibility
+                // must be explicity confirmed. If we made it this far, the user has OKed
+                // aliasing this trait, so they can deal with the compile error if the
+                // visibility is incorrect.
                 quote_spanned! { span =>
-                    // Setup for a glob import
-                    mod #submodule_ident {
-                        #super2_visibility use super::exact::#ident as #ident;
-
-                        pub(super) mod globbed {
-                            // Use the macro if it exists. The type will be imported, but...
-                            #super3_visibility use super::*;
-                            // Overwritten by our 'reduced generics' type alias
-                            #super3_visibility type #ident #parameters = super::super::exact::#ident_internal #parameters;
-                        }
-                    }
-
-                    #super_visibility use #submodule_ident::globbed::#ident;
+                    #super_visibility use self::exact::#ident as #ident;
                 }
             }
         };

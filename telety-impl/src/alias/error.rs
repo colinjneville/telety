@@ -8,6 +8,7 @@ pub struct Error {
 pub enum Kind {
     AssociatedType,
     Closure,
+    Trait,
 }
 
 impl Kind {
@@ -29,6 +30,7 @@ impl From<Error> for syn::Error {
         let message = match kind {
             Kind::AssociatedType => "Associated types are not supported".to_string(),
             Kind::Closure => "Closure traits are not supported".to_string(),
+            Kind::Trait => "Traits have limited support, use #[telety(path, alias_traits = \"always\")] if all traits are publicly used.".to_string(),
         };
 
         syn::Error::new(span, message)
